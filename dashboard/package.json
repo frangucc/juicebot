@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true && next dev",
+    "start:tail": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true && next dev 2>&1 | tail -f",
+    "stop": "lsof -ti:3000 | xargs kill -9 2>/dev/null && echo 'Dashboard stopped on port 3000' || echo 'No process found on port 3000'",
     "lint": "next lint"
   },
   "dependencies": {

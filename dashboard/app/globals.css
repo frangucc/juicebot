@@ -3,25 +3,82 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
+  /* Brand Colors */
+  --teal-primary: #2cae96;
+  --teal-light: #3dd9bd;
+  --teal-dark: #1f8a77;
+  --teal-glow: rgba(44, 174, 150, 0.3);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  /* Background Colors */
+  --bg-dark: #0a0e14;
+  --bg-card: #191d27;
+  --bg-card-hover: #1f2430;
+
+  /* Glass Effect */
+  --glass-bg: rgba(44, 174, 150, 0.12);
+  --glass-border: rgba(44, 174, 150, 0.2);
+
+  /* Status Colors */
+  --red-negative: #ef4444;
+  --orange-warning: #f97316;
+  --yellow-caution: #eab308;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  color: var(--teal-primary);
+  background: var(--bg-dark);
+}
+
+/* Glass Card Effect */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card-hover:hover {
+  background: rgba(44, 174, 150, 0.12);
+  box-shadow: 0 0 20px var(--teal-glow);
+  transition: all 0.3s ease;
+}
+
+/* Glass Header with Gradient - No extra borders */
+.glass-header {
+  background: linear-gradient(135deg, rgba(44, 174, 150, 0.18) 0%, rgba(44, 174, 150, 0.12) 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* Brighter Glass Fill for Sections */
+.glass-section {
+  background: linear-gradient(135deg, rgba(44, 174, 150, 0.16) 0%, rgba(44, 174, 150, 0.10) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(44, 174, 150, 0.25);
+}
+
+/* Subtle Glow Effects */
+.glow-sm {
+  box-shadow: 0 0 10px var(--teal-glow);
+}
+
+.glow-md {
+  box-shadow: 0 0 20px var(--teal-glow);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px var(--teal-glow);
+}
+
+/* Animated Pulse Glow */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--teal-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--teal-glow), 0 0 30px var(--teal-glow);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }

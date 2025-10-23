@@ -153,12 +153,12 @@ export function AlertsList({ threshold = 0, priceFilter = 'all', alerts: propsAl
   }
 
   return (
-    <div className="bg-gray-950 border border-green-800 rounded overflow-hidden">
-      <div className="px-4 md:px-6 py-3 md:py-4 border-b border-green-800 bg-gray-900 flex items-center justify-between">
+    <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden">
+      <div className="px-4 md:px-6 py-3 md:py-4 border-b border-glass glass-header flex items-center justify-between">
         <div className="flex-1">
-          <h2 className="text-lg md:text-xl font-semibold text-green-400">RECENT ALERTS</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-teal">RECENT ALERTS</h2>
           {threshold > 0 && (
-            <p className="text-xs text-green-700 mt-1">
+            <p className="text-xs text-teal-dark mt-1">
               Showing {filteredAlerts.length} of {displayAlerts.length} alerts (≥{threshold.toFixed(1)}%)
             </p>
           )}

@@ -74,12 +74,12 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
   }
 
   const renderColumn = (title: string, data: SymbolState[], colorClass: string) => (
-    <div className="bg-gray-950 border border-green-800 rounded overflow-hidden flex-1">
-      <div className="p-3 border-b border-green-800 bg-gray-900">
-        <h3 className="text-sm font-bold text-green-400">
+    <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden flex-1">
+      <div className="p-3 border-b border-glass glass-header">
+        <h3 className="text-sm font-bold text-teal">
           {title}
         </h3>
-        <p className="text-xs text-green-700">
+        <p className="text-xs text-teal-dark">
           {data.length} active
         </p>
       </div>

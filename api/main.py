@@ -14,9 +14,15 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
 import pytz
+from functools import lru_cache
+import time
 
 from shared.database import supabase
 from shared.config import settings
+
+# Cache for leaderboard data (30 second TTL)
+_leaderboard_cache = {}
+_cache_ttl = 30
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -167,22 +173,25 @@ async def get_todays_alerts():
 async def get_alert_stats():
     """Get statistics about alerts."""
     try:
-        # Get alerts from last 24 hours
+        # Get alerts from last 24 hours with count
         cutoff = datetime.now(pytz.UTC) - timedelta(hours=24)
 
-        response = (
+        # First get the ACTUAL count
+        count_response = (
             supabase.table("screener_alerts")
-            .select("*")
+            .select("*", count="exact")
             .gte("trigger_time", cutoff.isoformat())
+            .limit(5000)  # Increase limit to get more alerts
             .execute()
         )
 
-        alerts = response.data
+        alerts = count_response.data
+        actual_count = count_response.count if hasattr(count_response, 'count') else len(alerts)
 
         # Calculate stats
-        total_alerts = len(alerts)
+        total_alerts = actual_count
         symbols = set(a["symbol"] for a in alerts)
-        avg_move = sum(a["conditions"].get("pct_move", 0) for a in alerts) / total_alerts if total_alerts > 0 else 0
+        avg_move = sum(a["conditions"].get("pct_move", 0) for a in alerts) / len(alerts) if len(alerts) > 0 else 0
 
         # Group by alert type
         by_type = {}
@@ -196,6 +205,7 @@ async def get_alert_stats():
             "unique_symbols": len(symbols),
             "avg_pct_move": round(avg_move, 2),
             "by_type": by_type,
+            "note": f"Stats based on {len(alerts)} sampled alerts" if len(alerts) < total_alerts else None
         }
 
     except Exception as e:
@@ -273,7 +283,7 @@ async def get_leaderboard(
     baseline: str = "yesterday"
 ):
     """
-    Get leaderboard of symbols categorized by % move ranges.
+    Get leaderboard of symbols categorized by % move ranges - FAST version with caching.
 
     Args:
         threshold: Minimum % move to include (default: 1.0%)
@@ -284,46 +294,36 @@ async def get_leaderboard(
         Categorized symbols by move ranges: 20%+, 10-20%, 1-10%
     """
     try:
+        # Check cache first
+        cache_key = f"{baseline}:{price_filter}:{threshold}"
+        now = time.time()
+
+        if cache_key in _leaderboard_cache:
+            cached_data, cache_time = _leaderboard_cache[cache_key]
+            if now - cache_time < _cache_ttl:
+                return cached_data
+
         pct_field = f"pct_from_{baseline}"
 
-        # Fetch ALL symbols - do filtering in Python to avoid Supabase limit issues
-        # Get symbols in batches using pagination
-        all_symbols = []
-        page_size = 1000
-        offset = 0
+        # Build query with database-level filtering
+        query = supabase.table("symbol_state").select("*")
 
-        while True:
-            query = supabase.table("symbol_state").select("*")
+        # Apply price filter at database level
+        if price_filter == "small":
+            query = query.lt("current_price", 20)
+        elif price_filter == "mid":
+            query = query.gte("current_price", 20).lt("current_price", 100)
+        elif price_filter == "large":
+            query = query.gte("current_price", 100)
 
-            # Apply price filter
-            if price_filter == "small":
-                query = query.lt("current_price", 20)
-            elif price_filter == "mid":
-                query = query.gte("current_price", 20).lt("current_price", 100)
-            elif price_filter == "large":
-                query = query.gte("current_price", 100)
+        # Filter by threshold at database level using OR condition
+        query = query.or_(f"{pct_field}.gte.{threshold},{pct_field}.lte.{-threshold}")
 
-            # Paginate
-            query = query.range(offset, offset + page_size - 1)
-            response = query.execute()
+        # Limit to top movers only - we don't need ALL symbols
+        query = query.limit(2000)
 
-            if not response.data:
-                break
-
-            all_symbols.extend(response.data)
-            offset += page_size
-
-            # Stop if we got less than a full page
-            if len(response.data) < page_size:
-                break
-
-        # Filter by threshold in Python
-        symbols = [
-            s for s in all_symbols
-            if s.get(pct_field) is not None and (
-                s.get(pct_field) >= threshold or s.get(pct_field) <= -threshold
-            )
-        ]
+        response = query.execute()
+        symbols = response.data
 
         # Categorize by % ranges
         col_20_plus = []
@@ -332,6 +332,8 @@ async def get_leaderboard(
 
         for symbol in symbols:
             pct = symbol.get(pct_field, 0) or 0
+            if pct is None:
+                continue
             abs_pct = abs(pct)
 
             if abs_pct >= 20:
@@ -346,7 +348,7 @@ async def get_leaderboard(
         col_10_to_20.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
         col_1_to_10.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
 
-        return {
+        result = {
             "baseline": baseline,
             "threshold": threshold,
             "price_filter": price_filter,
@@ -355,6 +357,11 @@ async def get_leaderboard(
             "col_1_to_10": col_1_to_10,
             "total_symbols": len(symbols)
         }
+
+        # Cache the result
+        _leaderboard_cache[cache_key] = (result, now)
+
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch leaderboard: {str(e)}")

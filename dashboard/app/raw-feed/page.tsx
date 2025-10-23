@@ -3,17 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import GeekNav from '@/components/GeekNav';
-
-interface PriceUpdate {
-  symbol: string;
-  bid: number;
-  ask: number;
-  mid: number;
-  timestamp: string;
-}
+import { useData } from '@/contexts/DataContext';
 
 export default function RawFeedPage() {
-  const [priceUpdates, setPriceUpdates] = useState<PriceUpdate[]>([]);
+  const { priceUpdates, loadingStatus, isLoading } = useData();
   const [stats, setStats] = useState({
     totalSymbols: 0,
     messagesReceived: 0,
@@ -21,49 +14,12 @@ export default function RawFeedPage() {
   });
   const [messagesPerSec, setMessagesPerSec] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState<string>('Connecting to server...');
-  const [isConnected, setIsConnected] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
 
   useEffect(() => {
     setMounted(true);
-    let hasLoadedOnce = false;
 
-    // Fetch real price data from the API
-    const fetchPrices = async () => {
-      try {
-        const response = await fetch('http://localhost:8000/prices/recent?limit=20');
-        if (response.ok) {
-          const data = await response.json();
-          setPriceUpdates(data);
-          if (!hasLoadedOnce) {
-            setIsConnected(true);
-            setLoadingStatus('Connected • Streaming live data');
-            hasLoadedOnce = true;
-          }
-          setRetryCount(0);
-        } else {
-          throw new Error('Server error');
-        }
-      } catch (error) {
-        console.error('Failed to fetch prices:', error);
-        setIsConnected(false);
-        if (retryCount < maxRetries) {
-          setRetryCount(prev => prev + 1);
-          setLoadingStatus(`Connection issue - retrying (${retryCount + 1}/${maxRetries})...`);
-        } else {
-          setLoadingStatus('Could not connect - servers may be down');
-        }
-      }
-    };
-
-    // Initial fetch
-    fetchPrices();
-
-    // Update stats and prices periodically
+    // Update stats periodically
     const interval = setInterval(() => {
-      fetchPrices();
       setStats(prev => ({
         ...prev,
         messagesReceived: prev.messagesReceived + Math.floor(Math.random() * 100),
@@ -73,7 +29,7 @@ export default function RawFeedPage() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [retryCount]);
+  }, []);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -90,7 +46,7 @@ export default function RawFeedPage() {
     <div className="min-h-screen bg-black p-4 font-mono text-green-400">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 border-b border-green-800 pb-4">
+        <div className="mb-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-1">
@@ -144,57 +100,64 @@ export default function RawFeedPage() {
 
         {/* System Stats */}
         <div className="mb-6 grid grid-cols-4 gap-4">
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">
               Status
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-lg font-bold">CONNECTED</span>
+              <div className="w-2 h-2 bg-teal rounded-full pulse-glow"></div>
+              <span className="text-lg font-bold text-teal">CONNECTED</span>
             </div>
           </div>
 
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">
               Symbols Mapped
             </div>
-            <div className="text-2xl font-bold">11,938</div>
+            <div className="text-2xl font-bold text-teal">11,938</div>
           </div>
 
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">
               Messages/sec
             </div>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-teal">
               {mounted ? messagesPerSec : 0}
             </div>
           </div>
 
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">
               Last Update
             </div>
-            <div className="text-lg font-bold">
+            <div className="text-lg font-bold text-teal">
               {mounted ? formatTime(stats.lastUpdate) : '--:--:--'}
             </div>
           </div>
         </div>
 
         {/* Real-Time Price Samples */}
-        <div className="mb-6 bg-gray-950 border border-green-800 rounded overflow-hidden">
-          <div className="p-3 border-b border-green-800 bg-gray-900">
+        <div className="mb-6 bg-gray-950 border border-glass rounded-lg overflow-hidden">
+          <div className="p-3 border-b border-glass glass-header">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-green-600 uppercase tracking-wider">
+              <div className="text-xs text-teal uppercase tracking-wider font-semibold">
                 💰 LIVE PRICE SAMPLES (Last 20 Updates)
               </div>
-              <div className="text-xs text-green-700">
+              <div className="text-xs text-teal-dark">
                 Updated every 2 seconds
               </div>
             </div>
           </div>
 
           <div className="p-4 bg-black max-h-[300px] overflow-y-auto">
-            {mounted && priceUpdates.length > 0 ? (
+            {isLoading && priceUpdates.length === 0 ? (
+              <div className="text-yellow-600 text-sm">
+                <div>⏳ {loadingStatus}</div>
+                <div className="text-xs mt-2 text-gray-500">
+                  Loading recent price updates from scanner cache...
+                </div>
+              </div>
+            ) : priceUpdates.length > 0 ? (
               <div className="grid grid-cols-1 gap-2">
                 {priceUpdates.map((price, idx) => (
                   <div
@@ -223,33 +186,23 @@ export default function RawFeedPage() {
               </div>
             ) : (
               <div className="text-yellow-600 text-sm">
-                {mounted ? (
-                  priceUpdates.length === 0 ? (
-                    <>
-                      <div>⏳ Waiting for price data from scanner...</div>
-                      <div className="text-xs mt-2 text-gray-500">
-                        Make sure the scanner is running and processing market data.
-                      </div>
-                    </>
-                  ) : (
-                    'Loading...'
-                  )
-                ) : (
-                  'Initializing...'
-                )}
+                <div>⏳ Waiting for price data from scanner...</div>
+                <div className="text-xs mt-2 text-gray-500">
+                  Make sure the scanner is running and processing market data.
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Live Log Display */}
-        <div className="bg-gray-950 border border-green-800 rounded overflow-hidden">
-          <div className="p-3 border-b border-green-800 bg-gray-900">
+        <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden">
+          <div className="p-3 border-b border-glass glass-header">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-green-600 uppercase tracking-wider">
+              <div className="text-xs text-teal uppercase tracking-wider font-semibold">
                 📊 LIVE PRICE STREAM (MBP-1)
               </div>
-              <div className="text-xs text-green-700">
+              <div className="text-xs text-teal-dark">
                 Dataset: EQUS.MINI • Schema: mbp-1 • Threshold: 0.01%
               </div>
             </div>

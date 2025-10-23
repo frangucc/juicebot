@@ -1,70 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
-interface Alert {
-  id: string;
-  symbol: string;
-  alert_type: string;
-  trigger_price: number;
-  trigger_time: string;
-  conditions: {
-    pct_move: number;
-    previous_close: number;
-  };
-  metadata: {
-    bid: number;
-    ask: number;
-  };
-}
+import { useData } from '@/contexts/DataContext';
 
 export default function LiveFeedPage() {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState<string>('Connecting to server...');
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
-
-  useEffect(() => {
-    let hasLoadedOnce = false;
-
-    // Poll for new alerts every 2 seconds
-    const pollAlerts = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/alerts?limit=100`);
-        if (response.ok) {
-          const data = await response.json();
-          setAlerts(data);
-          if (!hasLoadedOnce) {
-            setIsConnected(true);
-            setLoadingStatus('Connected • Live');
-            hasLoadedOnce = true;
-          }
-          setRetryCount(0);
-        } else {
-          throw new Error('Server error');
-        }
-      } catch (error) {
-        console.error('Failed to fetch alerts:', error);
-        setIsConnected(false);
-        if (retryCount < maxRetries) {
-          setRetryCount(prev => prev + 1);
-          setLoadingStatus(`Connection issue - retrying (${retryCount + 1}/${maxRetries})...`);
-        } else {
-          setLoadingStatus('Could not connect - servers may be down');
-        }
-      }
-    };
-
-    // Initial fetch
-    pollAlerts();
-
-    // Poll every 2 seconds
-    const interval = setInterval(pollAlerts, 2000);
-
-    return () => clearInterval(interval);
-  }, [retryCount]);
+  const { alerts, loadingStatus, isLoading } = useData();
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -89,7 +29,7 @@ export default function LiveFeedPage() {
     <div className="min-h-screen bg-black p-4 md:p-6 font-mono text-green-400">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 border-b border-green-800 pb-4">
+        <div className="mb-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-1">
@@ -164,27 +104,20 @@ export default function LiveFeedPage() {
         </div>
 
         {/* Stats Bar */}
-        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">Status</div>
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-              <span className="text-lg font-bold text-green-300">{isConnected ? 'CONNECTED' : 'OFFLINE'}</span>
-            </div>
+        <div className="mb-6 grid grid-cols-3 gap-3 md:gap-4">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">Total Alerts</div>
+            <div className="text-2xl font-bold text-teal">{alerts.length}</div>
           </div>
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">Total Alerts</div>
-            <div className="text-2xl font-bold text-green-300">{alerts.length}</div>
-          </div>
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">Unique Symbols</div>
-            <div className="text-2xl font-bold text-green-300">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">Unique Symbols</div>
+            <div className="text-2xl font-bold text-teal">
               {new Set(alerts.map((a) => a.symbol)).size}
             </div>
           </div>
-          <div className="bg-gray-900 border border-green-800 rounded p-3">
-            <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">Avg Move</div>
-            <div className="text-2xl font-bold text-green-300">
+          <div className="glass-card rounded-lg p-3 transition-all hover:shadow-glow-sm">
+            <div className="text-teal-dark text-xs mb-1 uppercase tracking-wider">Avg Move</div>
+            <div className="text-2xl font-bold text-teal">
               {alerts.length > 0
                 ? (
                     alerts
@@ -199,19 +132,27 @@ export default function LiveFeedPage() {
         </div>
 
         {/* Alert Feed */}
-        <div className="bg-gray-950 border border-green-800 rounded overflow-hidden">
-          <div className="p-3 border-b border-green-800 bg-gray-900">
+        <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden">
+          <div className="p-3 border-b border-glass glass-header">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-green-600 uppercase tracking-wider">
+              <div className="text-xs text-teal uppercase tracking-wider font-semibold">
                 ⚡ ALERT STREAM
               </div>
-              <div className="text-xs text-green-700">
+              <div className="text-xs text-teal-dark">
                 Refreshing every 2 seconds • 11,895 symbols monitored
               </div>
             </div>
           </div>
           <div className="h-[600px] overflow-y-auto p-4 space-y-2 bg-black">
-            {alerts.length === 0 ? (
+            {isLoading && alerts.length === 0 ? (
+              <div className="text-center py-12 text-green-700">
+                <div className="text-4xl mb-3">⏳</div>
+                <div className="text-green-500">{loadingStatus}</div>
+                <div className="text-sm mt-2 text-green-800">
+                  Loading recent alerts from the last 24 hours...
+                </div>
+              </div>
+            ) : alerts.length === 0 ? (
               <div className="text-center py-12 text-green-700">
                 <div className="text-4xl mb-3">⏳</div>
                 <div className="text-green-500">Waiting for alerts...</div>
