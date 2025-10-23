@@ -288,7 +288,7 @@ class PriceMovementScanner:
             "current_price": current_price,
             "current_bid": bid,
             "current_ask": ask,
-            "current_timestamp": timestamp.isoformat(),
+            "price_timestamp": timestamp.isoformat(),
             "yesterday_close": yesterday_close,
             "today_open": today_open,
             "price_15min_ago": price_15min_ago,

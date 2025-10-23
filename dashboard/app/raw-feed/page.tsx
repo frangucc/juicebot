@@ -21,9 +21,14 @@ export default function RawFeedPage() {
   });
   const [messagesPerSec, setMessagesPerSec] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string>('Connecting to server...');
+  const [isConnected, setIsConnected] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     setMounted(true);
+    let hasLoadedOnce = false;
 
     // Fetch real price data from the API
     const fetchPrices = async () => {
@@ -32,9 +37,24 @@ export default function RawFeedPage() {
         if (response.ok) {
           const data = await response.json();
           setPriceUpdates(data);
+          if (!hasLoadedOnce) {
+            setIsConnected(true);
+            setLoadingStatus('Connected • Streaming live data');
+            hasLoadedOnce = true;
+          }
+          setRetryCount(0);
+        } else {
+          throw new Error('Server error');
         }
       } catch (error) {
         console.error('Failed to fetch prices:', error);
+        setIsConnected(false);
+        if (retryCount < maxRetries) {
+          setRetryCount(prev => prev + 1);
+          setLoadingStatus(`Connection issue - retrying (${retryCount + 1}/${maxRetries})...`);
+        } else {
+          setLoadingStatus('Could not connect - servers may be down');
+        }
       }
     };
 
@@ -53,7 +73,7 @@ export default function RawFeedPage() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [retryCount]);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -73,12 +93,31 @@ export default function RawFeedPage() {
         <div className="mb-6 border-b border-green-800 pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">
+              <h1 className="text-3xl font-bold mb-1">
                 📡 RAW DATA FEED
               </h1>
-              <p className="text-green-600 text-sm">
-                Live market data stream • 11,895 symbols • MBP-1 (Top of Book)
-              </p>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  loadingStatus.includes('Streaming') || loadingStatus.includes('Connected')
+                    ? 'bg-green-500'
+                    : loadingStatus.includes('could not') || loadingStatus.includes('down')
+                    ? 'bg-red-500'
+                    : loadingStatus.includes('retrying') || loadingStatus.includes('issue')
+                    ? 'bg-yellow-500'
+                    : 'bg-green-700'
+                }`}></div>
+                <p className={`text-sm ${
+                  loadingStatus.includes('Streaming') || loadingStatus.includes('Connected')
+                    ? 'text-green-600'
+                    : loadingStatus.includes('could not') || loadingStatus.includes('down')
+                    ? 'text-red-600'
+                    : loadingStatus.includes('retrying') || loadingStatus.includes('issue')
+                    ? 'text-yellow-600'
+                    : 'text-green-700'
+                }`}>
+                  {loadingStatus}
+                </p>
+              </div>
             </div>
             <div className="flex gap-3">
               <Link

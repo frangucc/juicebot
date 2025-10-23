@@ -2,103 +2,64 @@
 
 import { useEffect, useState } from 'react'
 
-interface Alert {
-  id: string
+interface SymbolState {
   symbol: string
-  trigger_price: number
-  trigger_time: string
-  pct_move: number
-  conditions?: {
-    pct_move: number
-    previous_close: number
-  }
-}
-
-interface LivePrice {
-  symbol: string
-  mid: number
-  timestamp: string
+  current_price: number
+  pct_from_yesterday: number
+  pct_from_open: number
+  pct_from_15min: number
+  pct_from_5min: number
+  hod_pct: number
+  last_updated: string
 }
 
 interface AlertsLeaderboardProps {
-  alerts: Alert[]
   threshold: number
   priceFilter: 'all' | 'small' | 'mid' | 'large'
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-export function AlertsLeaderboard({ alerts, threshold, priceFilter }: AlertsLeaderboardProps) {
-  const [livePrices, setLivePrices] = useState<LivePrice[]>([])
+export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardProps) {
+  const [leaderboardData, setLeaderboardData] = useState<{
+    col_20_plus: SymbolState[]
+    col_10_to_20: SymbolState[]
+    col_1_to_10: SymbolState[]
+  }>({
+    col_20_plus: [],
+    col_10_to_20: [],
+    col_1_to_10: []
+  })
 
   useEffect(() => {
-    const fetchLivePrices = async () => {
+    const fetchLeaderboard = async () => {
       try {
-        const response = await fetch(`${API_URL}/prices/recent?limit=200`)
+        // Convert price filter to query param
+        const priceParam = priceFilter !== 'all' ? `&price_filter=${priceFilter}` : ''
+        const response = await fetch(
+          `${API_URL}/symbols/leaderboard?threshold=${threshold}&baseline=yesterday${priceParam}`
+        )
         if (response.ok) {
           const data = await response.json()
-          setLivePrices(data)
+          setLeaderboardData({
+            col_20_plus: data.col_20_plus || [],
+            col_10_to_20: data.col_10_to_20 || [],
+            col_1_to_10: data.col_1_to_10 || []
+          })
         }
       } catch (error) {
-        console.error('Failed to fetch live prices:', error)
+        console.error('Failed to fetch leaderboard:', error)
       }
     }
 
-    fetchLivePrices()
-    const interval = setInterval(fetchLivePrices, 2000)
+    fetchLeaderboard()
+    const interval = setInterval(fetchLeaderboard, 2000)
     return () => clearInterval(interval)
-  }, [])
-  // Apply price filter
-  const filterByPrice = (alert: Alert) => {
-    const price = alert.trigger_price
-    if (priceFilter === 'small') return price < 20
-    if (priceFilter === 'mid') return price >= 20 && price < 100
-    if (priceFilter === 'large') return price >= 100
-    return true
-  }
+  }, [threshold, priceFilter])
 
-  // Calculate current % move for each alert using live prices
-  const alertsWithLiveMove = alerts.map(alert => {
-    // Find latest live price for this symbol
-    const livePrice = livePrices.find(p => p.symbol === alert.symbol)
-
-    if (!livePrice) {
-      // No live price, use alert data
-      return { ...alert, currentPrice: alert.trigger_price, currentMove: alert.pct_move }
-    }
-
-    // Calculate current % move from baseline (previous_close)
-    const baseline = alert.conditions?.previous_close || alert.trigger_price
-    const currentMove = ((livePrice.mid - baseline) / baseline) * 100
-
-    return {
-      ...alert,
-      currentPrice: livePrice.mid,
-      currentMove: currentMove
-    }
-  })
-
-  // Deduplicate by symbol, keep most recent alert
-  const deduped = alertsWithLiveMove.reduce((acc, alert) => {
-    const existing = acc.find(a => a.symbol === alert.symbol)
-    if (!existing) {
-      acc.push(alert)
-    } else if (new Date(alert.trigger_time) > new Date(existing.trigger_time)) {
-      const index = acc.indexOf(existing)
-      acc[index] = alert
-    }
-    return acc
-  }, [] as typeof alertsWithLiveMove)
-
-  // Apply filters using CURRENT move %
-  const filtered = deduped
-    .filter(alert => Math.abs(alert.currentMove) >= threshold)
-    .filter(alert => filterByPrice(alert))
-
-  // Categorize into columns using CURRENT move %
-  const col20Plus = filtered.filter(a => Math.abs(a.currentMove) >= 20).sort((a, b) => Math.abs(b.currentMove) - Math.abs(a.currentMove))
-  const col10To20 = filtered.filter(a => Math.abs(a.currentMove) >= 10 && Math.abs(a.currentMove) < 20).sort((a, b) => Math.abs(b.currentMove) - Math.abs(a.currentMove))
-  const col1To10 = filtered.filter(a => Math.abs(a.currentMove) >= 1 && Math.abs(a.currentMove) < 10).sort((a, b) => Math.abs(b.currentMove) - Math.abs(a.currentMove))
+  const col20Plus = leaderboardData.col_20_plus
+  const col10To20 = leaderboardData.col_10_to_20
+  const col1To10 = leaderboardData.col_1_to_10
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -112,11 +73,11 @@ export function AlertsLeaderboard({ alerts, threshold, priceFilter }: AlertsLead
     return `${diffHours}h ago`
   }
 
-  const renderColumn = (title: string, icon: string, data: Alert[], colorClass: string) => (
+  const renderColumn = (title: string, data: SymbolState[], colorClass: string) => (
     <div className="bg-gray-950 border border-green-800 rounded overflow-hidden flex-1">
       <div className="p-3 border-b border-green-800 bg-gray-900">
         <h3 className="text-sm font-bold text-green-400">
-          {icon} {title}
+          {title}
         </h3>
         <p className="text-xs text-green-700">
           {data.length} active
@@ -128,20 +89,20 @@ export function AlertsLeaderboard({ alerts, threshold, priceFilter }: AlertsLead
             No alerts in this range
           </div>
         ) : (
-          data.map(alert => (
+          data.map(symbolState => (
             <div
-              key={alert.id}
+              key={symbolState.symbol}
               className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs"
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-green-300">{alert.symbol}</span>
+                <span className="font-bold text-green-300">{symbolState.symbol}</span>
                 <span className={`font-bold ${colorClass}`}>
-                  {alert.currentMove > 0 ? '+' : ''}{alert.currentMove.toFixed(2)}%
+                  {symbolState.pct_from_yesterday > 0 ? '+' : ''}{symbolState.pct_from_yesterday.toFixed(2)}%
                 </span>
               </div>
               <div className="flex items-center justify-between text-green-700">
-                <span>${alert.currentPrice.toFixed(2)}</span>
-                <span>{formatTime(alert.trigger_time)}</span>
+                <span>${symbolState.current_price.toFixed(2)}</span>
+                <span>{formatTime(symbolState.last_updated)}</span>
               </div>
             </div>
           ))
@@ -151,10 +112,25 @@ export function AlertsLeaderboard({ alerts, threshold, priceFilter }: AlertsLead
   )
 
   return (
-    <div className="grid grid-cols-3 gap-4 mb-6">
-      {renderColumn('20%+', '🔥', col20Plus, 'text-red-400')}
-      {renderColumn('10-20%', '⚡', col10To20, 'text-yellow-400')}
-      {renderColumn('1-10%', '📊', col1To10, 'text-green-400')}
+    <div className="mb-6">
+      {/* Desktop: 3 columns side by side */}
+      <div className="hidden md:grid md:grid-cols-3 gap-4">
+        {renderColumn('20%+', col20Plus, 'text-red-400')}
+        {renderColumn('10-20%', col10To20, 'text-yellow-400')}
+        {renderColumn('1-10%', col1To10, 'text-green-400')}
+      </div>
+
+      {/* Mobile: Single column view with hint */}
+      <div className="md:hidden">
+        <div className="overflow-hidden">
+          <div className="snap-start shrink-0 w-full">
+            {renderColumn('20%+', col20Plus, 'text-red-400')}
+          </div>
+        </div>
+        <p className="text-center text-xs text-green-700 mt-2">
+          Swipe right on table below to see 10-20% and 1-10% segments
+        </p>
+      </div>
     </div>
   )
 }

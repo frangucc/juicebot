@@ -22,8 +22,13 @@ interface Alert {
 export default function LiveFeedPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string>('Connecting to server...');
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   useEffect(() => {
+    let hasLoadedOnce = false;
+
     // Poll for new alerts every 2 seconds
     const pollAlerts = async () => {
       try {
@@ -31,11 +36,24 @@ export default function LiveFeedPage() {
         if (response.ok) {
           const data = await response.json();
           setAlerts(data);
-          setIsConnected(true);
+          if (!hasLoadedOnce) {
+            setIsConnected(true);
+            setLoadingStatus('Connected • Live');
+            hasLoadedOnce = true;
+          }
+          setRetryCount(0);
+        } else {
+          throw new Error('Server error');
         }
       } catch (error) {
         console.error('Failed to fetch alerts:', error);
         setIsConnected(false);
+        if (retryCount < maxRetries) {
+          setRetryCount(prev => prev + 1);
+          setLoadingStatus(`Connection issue - retrying (${retryCount + 1}/${maxRetries})...`);
+        } else {
+          setLoadingStatus('Could not connect - servers may be down');
+        }
       }
     };
 
@@ -46,7 +64,7 @@ export default function LiveFeedPage() {
     const interval = setInterval(pollAlerts, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [retryCount]);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -68,20 +86,39 @@ export default function LiveFeedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 font-mono text-green-400">
+    <div className="min-h-screen bg-black p-4 md:p-6 font-mono text-green-400">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 border-b border-green-800 pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold mb-1">
                 ⚡ ALERT FEED
               </h1>
-              <p className="text-green-600 text-sm">
-                Real-time price movement alerts • 11,895 symbols monitored
-              </p>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  loadingStatus.includes('Live') || loadingStatus === 'Connected • Live'
+                    ? 'bg-green-500'
+                    : loadingStatus.includes('could not') || loadingStatus.includes('down')
+                    ? 'bg-red-500'
+                    : loadingStatus.includes('retrying') || loadingStatus.includes('issue')
+                    ? 'bg-yellow-500'
+                    : 'bg-green-700'
+                }`}></div>
+                <p className={`text-sm ${
+                  loadingStatus.includes('Live') || loadingStatus === 'Connected • Live'
+                    ? 'text-green-600'
+                    : loadingStatus.includes('could not') || loadingStatus.includes('down')
+                    ? 'text-red-600'
+                    : loadingStatus.includes('retrying') || loadingStatus.includes('issue')
+                    ? 'text-yellow-600'
+                    : 'text-green-700'
+                }`}>
+                  {loadingStatus}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3">
+            <div className="hidden md:flex gap-3">
               <Link
                 href="/"
                 className="px-4 py-2 bg-green-900/50 hover:bg-green-900 text-green-700 hover:text-green-400 rounded font-medium transition-colors border border-green-800"
@@ -104,8 +141,30 @@ export default function LiveFeedPage() {
           </div>
         </div>
 
+        {/* Mobile Navigation */}
+        <div className="md:hidden mb-6 flex gap-2 overflow-x-auto">
+          <Link
+            href="/"
+            className="px-4 py-2 bg-green-900/50 hover:bg-green-900 text-green-700 hover:text-green-400 rounded font-medium transition-colors border border-green-800 whitespace-nowrap"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/live"
+            className="px-4 py-2 bg-green-900 text-green-300 rounded font-medium transition-colors border border-green-600 whitespace-nowrap"
+          >
+            Alert Feed
+          </Link>
+          <Link
+            href="/raw-feed"
+            className="px-4 py-2 bg-green-900/50 hover:bg-green-900 text-green-700 hover:text-green-400 rounded font-medium transition-colors border border-green-800 whitespace-nowrap"
+          >
+            Raw Data
+          </Link>
+        </div>
+
         {/* Stats Bar */}
-        <div className="mb-6 grid grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <div className="bg-gray-900 border border-green-800 rounded p-3">
             <div className="text-green-600 text-xs mb-1 uppercase tracking-wider">Status</div>
             <div className="flex items-center gap-2">

@@ -19,6 +19,16 @@ interface Alert {
   metadata: any
 }
 
+interface SymbolState {
+  symbol: string
+  current_price: number
+  pct_from_yesterday: number
+  pct_from_open: number
+  pct_from_15min: number
+  pct_from_5min: number
+  hod_pct: number
+}
+
 interface AlertsListProps {
   threshold?: number
   priceFilter?: 'all' | 'small' | 'mid' | 'large'
@@ -31,6 +41,7 @@ export function AlertsList({ threshold = 0, priceFilter = 'all', alerts: propsAl
   const [isPaused, setIsPaused] = useState(false)
   const [queuedAlerts, setQueuedAlerts] = useState<Alert[]>([])
   const [displayAlerts, setDisplayAlerts] = useState<Alert[]>(propsAlerts)
+  const [symbolStates, setSymbolStates] = useState<Map<string, SymbolState>>(new Map())
 
   useEffect(() => {
     if (isPaused) {
@@ -39,6 +50,32 @@ export function AlertsList({ threshold = 0, priceFilter = 'all', alerts: propsAl
       setDisplayAlerts(propsAlerts)
     }
   }, [propsAlerts, isPaused])
+
+  // Fetch symbol states for all visible alerts
+  useEffect(() => {
+    const fetchSymbolStates = async () => {
+      try {
+        // Get unique symbols from displayed alerts
+        const symbols = [...new Set(displayAlerts.map(a => a.symbol))]
+        if (symbols.length === 0) return
+
+        // Fetch state for all symbols
+        const response = await fetch(`${API_URL}/symbols/state?threshold=0&limit=500`)
+        if (response.ok) {
+          const states: SymbolState[] = await response.json()
+          const stateMap = new Map<string, SymbolState>()
+          states.forEach(state => stateMap.set(state.symbol, state))
+          setSymbolStates(stateMap)
+        }
+      } catch (error) {
+        console.error('Failed to fetch symbol states:', error)
+      }
+    }
+
+    fetchSymbolStates()
+    const interval = setInterval(fetchSymbolStates, 2000)
+    return () => clearInterval(interval)
+  }, [displayAlerts])
 
   const handlePauseToggle = () => {
     if (isPaused) {
@@ -117,9 +154,9 @@ export function AlertsList({ threshold = 0, priceFilter = 'all', alerts: propsAl
 
   return (
     <div className="bg-gray-950 border border-green-800 rounded overflow-hidden">
-      <div className="px-6 py-4 border-b border-green-800 bg-gray-900 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-green-400">⚡ RECENT ALERTS</h2>
+      <div className="px-4 md:px-6 py-3 md:py-4 border-b border-green-800 bg-gray-900 flex items-center justify-between">
+        <div className="flex-1">
+          <h2 className="text-lg md:text-xl font-semibold text-green-400">RECENT ALERTS</h2>
           {threshold > 0 && (
             <p className="text-xs text-green-700 mt-1">
               Showing {filteredAlerts.length} of {displayAlerts.length} alerts (≥{threshold.toFixed(1)}%)
@@ -128,13 +165,14 @@ export function AlertsList({ threshold = 0, priceFilter = 'all', alerts: propsAl
         </div>
         <button
           onClick={handlePauseToggle}
-          className={`px-4 py-2 rounded font-medium transition-colors border ${
+          className={`px-2 md:px-4 py-1.5 md:py-2 rounded text-sm font-medium transition-colors border ${
             isPaused
               ? 'bg-green-900 hover:bg-green-800 text-green-400 border-green-700'
               : 'bg-gray-800 hover:bg-gray-700 text-green-500 border-green-800'
           }`}
+          aria-label={isPaused ? 'Resume' : 'Pause'}
         >
-          {isPaused ? '▶ Resume' : '⏸ Pause'}
+          {isPaused ? '▶' : '⏸'}
         </button>
       </div>
       {isPaused && queuedAlerts.length > 0 && (
@@ -143,74 +181,145 @@ export function AlertsList({ threshold = 0, priceFilter = 'all', alerts: propsAl
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto -mx-px">
+        <table className="w-full min-w-max">
           <thead className="bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
                 Symbol
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
                 Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
                 Price
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900">
-                Move %
+              <th className="px-2 md:px-3 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
+                % Yest
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900">
+              <th className="px-2 md:px-3 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
+                % Open
+              </th>
+              <th className="px-2 md:px-3 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
+                % 15m
+              </th>
+              <th className="px-2 md:px-3 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
+                % 5m
+              </th>
+              <th className="px-2 md:px-3 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
+                HOD %
+              </th>
+              <th className="px-2 md:px-3 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-green-600 uppercase tracking-wider border-b border-green-900 whitespace-nowrap">
                 Time
               </th>
             </tr>
           </thead>
           <tbody className="bg-black">
-            {filteredAlerts.map((alert) => (
-              <tr
-                key={alert.id}
-                className="border-b border-green-900 hover:bg-green-950/30 transition-colors"
-              >
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-green-300">
-                  {alert.symbol}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 py-1 text-xs rounded border ${
-                      alert.alert_type === 'gap_up'
-                        ? 'bg-green-900/50 text-green-400 border-green-700'
-                        : 'bg-red-900/50 text-red-400 border-red-700'
+            {filteredAlerts.map((alert) => {
+              const state = symbolStates.get(alert.symbol)
+              return (
+                <tr
+                  key={alert.id}
+                  className="border-b border-green-900 hover:bg-green-950/30 transition-colors"
+                >
+                  <td className="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap font-medium text-green-300 text-sm">
+                    {alert.symbol}
+                  </td>
+                  <td className="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap">
+                    <span
+                      className={`px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs rounded border ${
+                        alert.alert_type === 'gap_up'
+                          ? 'bg-green-900/50 text-green-400 border-green-700'
+                          : 'bg-red-900/50 text-red-400 border-red-700'
+                      }`}
+                    >
+                      {alert.alert_type}
+                    </span>
+                  </td>
+                  <td className="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-green-400 text-sm">
+                    ${(state?.current_price || alert.trigger_price).toFixed(2)}
+                  </td>
+                  <td
+                    className={`px-2 md:px-3 py-2 md:py-4 whitespace-nowrap font-semibold text-sm ${
+                      (state?.pct_from_yesterday || alert.pct_move) > 0 ? 'text-green-400' : 'text-red-400'
                     }`}
                   >
-                    {alert.alert_type}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-green-400">
-                  ${alert.trigger_price.toFixed(2)}
-                </td>
-                <td
-                  className={`px-6 py-4 whitespace-nowrap font-semibold ${
-                    alert.pct_move > 0 ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {alert.pct_move > 0 ? '+' : ''}
-                  {alert.pct_move.toFixed(2)}%
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-green-700">
-                  {(() => {
-                    const date = new Date(alert.trigger_time)
-                    const now = new Date()
-                    const diffMs = now.getTime() - date.getTime()
-                    const diffMin = Math.floor(diffMs / 60000)
+                    {(state?.pct_from_yesterday || alert.pct_move) > 0 ? '+' : ''}
+                    {(state?.pct_from_yesterday || alert.pct_move).toFixed(2)}%
+                  </td>
+                  <td
+                    className={`px-2 md:px-3 py-2 md:py-4 whitespace-nowrap font-semibold text-sm ${
+                      (state?.pct_from_open || 0) > 0 ? 'text-green-400' : state?.pct_from_open ? 'text-red-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {state?.pct_from_open !== null && state?.pct_from_open !== undefined ? (
+                      <>
+                        {state.pct_from_open > 0 ? '+' : ''}
+                        {state.pct_from_open.toFixed(2)}%
+                      </>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td
+                    className={`px-2 md:px-3 py-2 md:py-4 whitespace-nowrap font-semibold text-sm ${
+                      (state?.pct_from_15min || 0) > 0 ? 'text-green-400' : state?.pct_from_15min ? 'text-red-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {state?.pct_from_15min !== null && state?.pct_from_15min !== undefined ? (
+                      <>
+                        {state.pct_from_15min > 0 ? '+' : ''}
+                        {state.pct_from_15min.toFixed(2)}%
+                      </>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td
+                    className={`px-2 md:px-3 py-2 md:py-4 whitespace-nowrap font-semibold text-sm ${
+                      (state?.pct_from_5min || 0) > 0 ? 'text-green-400' : state?.pct_from_5min ? 'text-red-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {state?.pct_from_5min !== null && state?.pct_from_5min !== undefined ? (
+                      <>
+                        {state.pct_from_5min > 0 ? '+' : ''}
+                        {state.pct_from_5min.toFixed(2)}%
+                      </>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td
+                    className={`px-2 md:px-3 py-2 md:py-4 whitespace-nowrap font-bold text-sm ${
+                      (state?.hod_pct || 0) > 0 ? 'text-yellow-400' : state?.hod_pct ? 'text-red-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {state?.hod_pct !== null && state?.hod_pct !== undefined ? (
+                      <>
+                        {state.hod_pct > 0 ? '+' : ''}
+                        {state.hod_pct.toFixed(2)}%
+                      </>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td className="px-2 md:px-3 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-green-700">
+                    {(() => {
+                      const date = new Date(alert.trigger_time)
+                      const now = new Date()
+                      const diffMs = now.getTime() - date.getTime()
+                      const diffMin = Math.floor(diffMs / 60000)
 
-                    if (diffMin < 1) return '1 min ago'
-                    if (diffMin < 60) return `${diffMin} min ago`
-                    const diffHours = Math.floor(diffMin / 60)
-                    if (diffHours < 24) return `${diffHours}h ago`
-                    return `${Math.floor(diffHours / 24)}d ago`
-                  })()}
-                </td>
-              </tr>
-            ))}
+                      if (diffMin < 1) return '1 min ago'
+                      if (diffMin < 60) return `${diffMin} min ago`
+                      const diffHours = Math.floor(diffMin / 60)
+                      if (diffHours < 24) return `${diffHours}h ago`
+                      return `${Math.floor(diffHours / 24)}d ago`
+                    })()}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

@@ -220,6 +220,146 @@ async def get_recent_prices(limit: int = 20):
         raise HTTPException(status_code=500, detail=f"Failed to fetch recent prices: {str(e)}")
 
 
+@app.get("/symbols/state")
+async def get_symbol_state(
+    threshold: float = 1.0,
+    price_filter: Optional[str] = None,
+    baseline: str = "yesterday",
+    limit: int = 200
+):
+    """
+    Get current state of all symbols with significant moves.
+
+    Args:
+        threshold: Minimum % move to include (default: 1.0%)
+        price_filter: Filter by stock price range: 'small' (<$20), 'mid' ($20-$100), 'large' (>$100)
+        baseline: Which baseline to use for filtering: 'yesterday', 'open', '15min', '5min'
+        limit: Maximum number of symbols to return (default: 200)
+
+    Returns:
+        List of symbols with current state including all timeframe % moves
+    """
+    try:
+        # Build query
+        query = supabase.table("symbol_state").select("*")
+
+        # Filter by % move threshold based on baseline
+        pct_field = f"pct_from_{baseline}"
+        query = query.or_(f"{pct_field}.gte.{threshold},{pct_field}.lte.{-threshold}")
+
+        # Apply price filter
+        if price_filter == "small":
+            query = query.lt("current_price", 20)
+        elif price_filter == "mid":
+            query = query.gte("current_price", 20).lt("current_price", 100)
+        elif price_filter == "large":
+            query = query.gte("current_price", 100)
+
+        # Order by absolute % move (descending) and limit
+        query = query.order(pct_field, desc=True).limit(limit)
+
+        response = query.execute()
+
+        return response.data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch symbol state: {str(e)}")
+
+
+@app.get("/symbols/leaderboard")
+async def get_leaderboard(
+    threshold: float = 1.0,
+    price_filter: Optional[str] = None,
+    baseline: str = "yesterday"
+):
+    """
+    Get leaderboard of symbols categorized by % move ranges.
+
+    Args:
+        threshold: Minimum % move to include (default: 1.0%)
+        price_filter: Filter by stock price range: 'small' (<$20), 'mid' ($20-$100), 'large' (>$100)
+        baseline: Which baseline to use: 'yesterday', 'open', '15min', '5min'
+
+    Returns:
+        Categorized symbols by move ranges: 20%+, 10-20%, 1-10%
+    """
+    try:
+        pct_field = f"pct_from_{baseline}"
+
+        # Fetch ALL symbols - do filtering in Python to avoid Supabase limit issues
+        # Get symbols in batches using pagination
+        all_symbols = []
+        page_size = 1000
+        offset = 0
+
+        while True:
+            query = supabase.table("symbol_state").select("*")
+
+            # Apply price filter
+            if price_filter == "small":
+                query = query.lt("current_price", 20)
+            elif price_filter == "mid":
+                query = query.gte("current_price", 20).lt("current_price", 100)
+            elif price_filter == "large":
+                query = query.gte("current_price", 100)
+
+            # Paginate
+            query = query.range(offset, offset + page_size - 1)
+            response = query.execute()
+
+            if not response.data:
+                break
+
+            all_symbols.extend(response.data)
+            offset += page_size
+
+            # Stop if we got less than a full page
+            if len(response.data) < page_size:
+                break
+
+        # Filter by threshold in Python
+        symbols = [
+            s for s in all_symbols
+            if s.get(pct_field) is not None and (
+                s.get(pct_field) >= threshold or s.get(pct_field) <= -threshold
+            )
+        ]
+
+        # Categorize by % ranges
+        col_20_plus = []
+        col_10_to_20 = []
+        col_1_to_10 = []
+
+        for symbol in symbols:
+            pct = symbol.get(pct_field, 0) or 0
+            abs_pct = abs(pct)
+
+            if abs_pct >= 20:
+                col_20_plus.append(symbol)
+            elif abs_pct >= 10:
+                col_10_to_20.append(symbol)
+            elif abs_pct >= threshold:
+                col_1_to_10.append(symbol)
+
+        # Sort each category by absolute % (descending)
+        col_20_plus.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
+        col_10_to_20.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
+        col_1_to_10.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
+
+        return {
+            "baseline": baseline,
+            "threshold": threshold,
+            "price_filter": price_filter,
+            "col_20_plus": col_20_plus,
+            "col_10_to_20": col_10_to_20,
+            "col_1_to_10": col_1_to_10,
+            "total_symbols": len(symbols)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch leaderboard: {str(e)}")
+
+
 # Run with: uvicorn api.main:app --reload
 if __name__ == "__main__":
     import uvicorn
