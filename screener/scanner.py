@@ -60,6 +60,10 @@ class PriceMovementScanner:
         self._state_update_counter = 0
         self._last_batch_update = time.time()
 
+        # Priority-based sampling system
+        self._symbol_counters: Dict[str, int] = {}  # Per-symbol message counters
+        self._symbol_priorities: Dict[str, int] = {}  # Cached priority tier per symbol
+
         # Initialize with yesterday's closing prices
         self._load_previous_close_prices()
 
@@ -94,6 +98,32 @@ class PriceMovementScanner:
 
         print(f"[{self._now()}] Loaded {len(self.last_day_lookup)} symbols with previous closing prices")
 
+    def _calculate_priority_tier(self, pct_move: float, threshold: float) -> int:
+        """
+        Calculate priority tier based on how far above threshold the move is.
+
+        Args:
+            pct_move: Current percentage move from yesterday's close
+            threshold: User's configured threshold percentage
+
+        Returns:
+            Priority tier: 1 (highest) to 4 (lowest)
+            - Tier 1: 20x threshold or more (extreme movers)
+            - Tier 2: 10x to 20x threshold (strong movers)
+            - Tier 3: 5x to 10x threshold (moderate movers)
+            - Tier 4: threshold to 5x threshold (normal movers)
+        """
+        abs_pct = abs(pct_move)
+
+        if abs_pct >= threshold * 20:
+            return 1
+        elif abs_pct >= threshold * 10:
+            return 2
+        elif abs_pct >= threshold * 5:
+            return 3
+        else:
+            return 4
+
     def scan(self, event: Any) -> None:
         """
         Scan for large price movements in market data events.
@@ -122,6 +152,14 @@ class PriceMovementScanner:
         if self._debug_count - self._debug_last_print >= 1000:
             print(f"[DEBUG] Processed {self._debug_count} messages, {len(self.symbol_directory)} symbols mapped")
             print(f"[DEBUG] Message types: {self._message_types}")
+
+            # Print priority distribution
+            if hasattr(self, '_symbol_priorities') and len(self._symbol_priorities) > 0:
+                priority_counts = {1: 0, 2: 0, 3: 0, 4: 0}
+                for p in self._symbol_priorities.values():
+                    priority_counts[p] = priority_counts.get(p, 0) + 1
+                print(f"[DEBUG] Priority distribution: P1(20%+)={priority_counts[1]}, P2(10-20%)={priority_counts[2]}, P3(5-10%)={priority_counts[3]}, P4(1-5%)={priority_counts[4]}")
+
             self._debug_last_print = self._debug_count
 
         # Handle symbol mapping messages
@@ -162,8 +200,18 @@ class PriceMovementScanner:
         bid = event.levels[0].bid_px
         ask = event.levels[0].ask_px
 
+        # Debug WGRX specifically
+        is_wgrx = symbol == "WGRX"
+        if is_wgrx and not hasattr(self, '_wgrx_debug_count'):
+            self._wgrx_debug_count = 0
+
+        if is_wgrx:
+            self._wgrx_debug_count += 1
+
         # Skip if one side of book is empty
         if bid == self.PX_NULL or ask == self.PX_NULL:
+            if is_wgrx and self._wgrx_debug_count % 100 == 0:
+                print(f"[DEBUG WGRX] Skipped - empty book (bid={bid}, ask={ask})")
             return
 
         # Calculate mid price and spread
@@ -175,7 +223,12 @@ class PriceMovementScanner:
         # Skip illiquid stocks with wide spreads (likely erratic pricing)
         # If spread > 2%, skip - these create false alerts
         if spread_pct > 0.02:
+            if is_wgrx and self._wgrx_debug_count % 100 == 0:
+                print(f"[DEBUG WGRX] Skipped - wide spread ({spread_pct*100:.2f}%)")
             return
+
+        if is_wgrx and self._wgrx_debug_count % 100 == 0:
+            print(f"[DEBUG WGRX] Processing! bid=${bid_price:.4f}, ask=${ask_price:.4f}, spread={spread_pct*100:.2f}%")
 
         last_close = self.last_day_lookup[symbol]
         last_alerted = self.last_alerted_price.get(symbol, last_close)
@@ -186,12 +239,29 @@ class PriceMovementScanner:
         except Exception:
             ts = pd.Timestamp.now('US/Eastern')
 
-        # Update symbol state tracking (for leaderboard and ML data)
-        # Sample every 10th update to reduce DB load
-        if not hasattr(self, '_state_sample_counter'):
-            self._state_sample_counter = 0
-        self._state_sample_counter += 1
-        if self._state_sample_counter % 10 == 0:
+        # Update symbol state tracking with priority-based sampling
+        # Calculate priority tier based on % move from yesterday
+        pct_from_yesterday = ((mid - last_close) / last_close) * 100 if last_close else 0
+        priority = self._calculate_priority_tier(pct_from_yesterday, self.pct_threshold)
+
+        # Priority-based sampling rates
+        PRIORITY_SAMPLE_RATES = {
+            1: 1,   # Every message (extreme movers, 20%+)
+            2: 3,   # Every 3rd message (strong movers, 10-20%)
+            3: 5,   # Every 5th message (moderate movers, 5-10%)
+            4: 10,  # Every 10th message (normal movers, threshold to 5x)
+        }
+
+        sample_rate = PRIORITY_SAMPLE_RATES.get(priority, 10)
+
+        # Initialize per-symbol counter
+        if symbol not in self._symbol_counters:
+            self._symbol_counters[symbol] = 0
+
+        self._symbol_counters[symbol] += 1
+
+        # Update state if sample rate reached
+        if self._symbol_counters[symbol] % sample_rate == 0:
             self._update_symbol_state(
                 symbol=symbol,
                 current_price=mid,
@@ -200,6 +270,8 @@ class PriceMovementScanner:
                 spread_pct=spread_pct,
                 timestamp=ts
             )
+            # Store priority for debugging
+            self._symbol_priorities[symbol] = priority
 
         # Cache every 10th price update for display (avoid overhead)
         if not hasattr(self, '_price_sample_counter'):

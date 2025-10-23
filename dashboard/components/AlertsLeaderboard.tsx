@@ -21,6 +21,7 @@ interface AlertsLeaderboardProps {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardProps) {
+  const [baselineFilter, setBaselineFilter] = useState<'show_all' | 'yesterday' | 'open' | '15min' | '5min'>('yesterday')
   const [leaderboardData, setLeaderboardData] = useState<{
     col_20_plus: SymbolState[]
     col_10_to_20: SymbolState[]
@@ -73,22 +74,55 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
     return `${diffHours}h ago`
   }
 
+  const getPercentValue = (symbolState: SymbolState, baseline: string) => {
+    switch (baseline) {
+      case 'yesterday': return symbolState.pct_from_yesterday
+      case 'open': return symbolState.pct_from_open
+      case '15min': return symbolState.pct_from_15min
+      case '5min': return symbolState.pct_from_5min
+      default: return symbolState.pct_from_yesterday
+    }
+  }
+
   const renderColumn = (title: string, data: SymbolState[], colorClass: string) => (
     <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden flex-1">
       <div className="p-3 border-b border-glass glass-header">
-        <h3 className="text-sm font-bold text-teal">
-          {title}
-        </h3>
-        <p className="text-xs text-teal-dark">
-          {data.length} active
-        </p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="text-sm font-bold text-teal">
+              {title}
+            </h3>
+            <p className="text-xs text-teal-dark">
+              {data.length} active
+            </p>
+          </div>
+          <select
+            value={baselineFilter}
+            onChange={(e) => setBaselineFilter(e.target.value as typeof baselineFilter)}
+            className="bg-gray-900 text-teal text-xs border border-glass rounded px-2 py-1 cursor-pointer hover:bg-gray-800 transition-colors"
+          >
+            <option value="show_all">SHOW ALL</option>
+            <option value="yesterday">% Yest</option>
+            <option value="open">% Open</option>
+            <option value="15min">% 15M</option>
+            <option value="5min">% 5M</option>
+          </select>
+        </div>
+        {baselineFilter === 'show_all' && (
+          <div className="grid grid-cols-4 gap-1 text-[10px] text-teal-dark uppercase mt-2 pt-2 border-t border-glass">
+            <div className="text-center">% Yest</div>
+            <div className="text-center">% Open</div>
+            <div className="text-center">% 15M</div>
+            <div className="text-center">% 5M</div>
+          </div>
+        )}
       </div>
       <div className="h-[500px] overflow-y-auto bg-black">
         {data.length === 0 ? (
           <div className="text-center py-12 text-green-800 text-xs">
             No alerts in this range
           </div>
-        ) : (
+        ) : baselineFilter === 'show_all' ? (
           data.map(symbolState => (
             <div
               key={symbolState.symbol}
@@ -96,16 +130,48 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-green-300">{symbolState.symbol}</span>
-                <span className={`font-bold ${colorClass}`}>
+                <span className="text-green-700 text-[10px]">${symbolState.current_price.toFixed(2)}</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1 text-center">
+                <span className={`font-bold ${symbolState.pct_from_yesterday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {symbolState.pct_from_yesterday > 0 ? '+' : ''}{symbolState.pct_from_yesterday.toFixed(2)}%
                 </span>
+                <span className={`font-bold ${symbolState.pct_from_open >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {symbolState.pct_from_open > 0 ? '+' : ''}{symbolState.pct_from_open.toFixed(2)}%
+                </span>
+                <span className={`font-bold ${symbolState.pct_from_15min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {symbolState.pct_from_15min > 0 ? '+' : ''}{symbolState.pct_from_15min.toFixed(2)}%
+                </span>
+                <span className={`font-bold ${symbolState.pct_from_5min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {symbolState.pct_from_5min > 0 ? '+' : ''}{symbolState.pct_from_5min.toFixed(2)}%
+                </span>
               </div>
-              <div className="flex items-center justify-between text-green-700">
-                <span>${symbolState.current_price.toFixed(2)}</span>
-                <span>{formatTime(symbolState.last_updated)}</span>
+              <div className="text-green-700 text-[10px] text-right mt-1">
+                {formatTime(symbolState.last_updated)}
               </div>
             </div>
           ))
+        ) : (
+          data.map(symbolState => {
+            const pctValue = getPercentValue(symbolState, baselineFilter)
+            return (
+              <div
+                key={symbolState.symbol}
+                className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-green-300">{symbolState.symbol}</span>
+                  <span className={`font-bold ${colorClass}`}>
+                    {pctValue > 0 ? '+' : ''}{pctValue.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-green-700">
+                  <span>${symbolState.current_price.toFixed(2)}</span>
+                  <span>{formatTime(symbolState.last_updated)}</span>
+                </div>
+              </div>
+            )
+          })
         )}
       </div>
     </div>
