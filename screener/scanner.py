@@ -284,6 +284,10 @@ class PriceMovementScanner:
             # Store priority for debugging
             self._symbol_priorities[symbol] = priority
 
+            # Debug Priority 1 symbols - log every update
+            if priority == 1 and self._symbol_counters[symbol] % 100 == 0:
+                print(f"[DEBUG P1] {symbol}: ${mid:.4f}, counter={self._symbol_counters[symbol]}, pct={pct_from_yesterday:.2f}%")
+
         # Cache every 10th price update for display (avoid overhead)
         if not hasattr(self, '_price_sample_counter'):
             self._price_sample_counter = 0
@@ -394,8 +398,11 @@ class PriceMovementScanner:
 
         self._state_update_counter += 1
 
-        # Batch update every 100 symbols or every 5 seconds
-        if self._state_update_counter >= 100 or (current_ts - self._last_batch_update) >= 5:
+        # Aggressive flush for real-time updates:
+        # - Flush every 10 symbol updates (down from 100)
+        # - OR every 2 seconds (down from 5)
+        # This ensures leaderboard symbols update much faster
+        if self._state_update_counter >= 10 or (current_ts - self._last_batch_update) >= 2:
             self._flush_state_to_db()
             self._last_batch_update = current_ts
 

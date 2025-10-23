@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { AlertsList } from '@/components/AlertsList'
 import { AlertsLeaderboard } from '@/components/AlertsLeaderboard'
 import { StatsCards } from '@/components/StatsCards'
@@ -23,9 +24,22 @@ export default function Home() {
           <div className="mb-6 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold mb-1">
-                  📊 DASHBOARD
-                </h1>
+                <div className="flex items-center gap-3 mb-1">
+                  <Image
+                    src="/images/juicebot-logo-filled.png"
+                    alt="Juicebot Logo"
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                  />
+                  <Image
+                    src="/images/juicebot-text-logo.png"
+                    alt="Juicebot"
+                    width={180}
+                    height={32}
+                    className="object-contain"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${
                     loadingStatus === 'Connected'
