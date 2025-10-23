@@ -109,11 +109,17 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
           </select>
         </div>
         {baselineFilter === 'show_all' && (
-          <div className="grid grid-cols-4 gap-1 text-[10px] text-teal-dark uppercase mt-2 pt-2 border-t border-glass">
-            <div className="text-center">% Yest</div>
-            <div className="text-center">% Open</div>
-            <div className="text-center">% 15M</div>
-            <div className="text-center">% 5M</div>
+          <div className="flex items-start gap-3 mt-2 pt-2 border-t border-glass">
+            {/* Empty space for column 1 (ticker/price/time) */}
+            <div className="w-20 flex-shrink-0"></div>
+
+            {/* Headers for columns 2-5 */}
+            <div className="grid grid-cols-4 gap-2 flex-1 text-[10px] text-teal-dark uppercase text-center">
+              <div>% Yest</div>
+              <div>% Open</div>
+              <div>% 15M</div>
+              <div>% 5M</div>
+            </div>
           </div>
         )}
       </div>
@@ -126,28 +132,29 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
           data.map(symbolState => (
             <div
               key={symbolState.symbol}
-              className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs"
+              className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-start gap-3"
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-green-300">{symbolState.symbol}</span>
-                <span className="text-green-700 text-[10px]">${symbolState.current_price.toFixed(2)}</span>
+              {/* Column 1: Symbol, Price, Timestamp (stacked vertically) */}
+              <div className="flex flex-col w-20 flex-shrink-0">
+                <span className="font-bold text-green-300 text-sm mb-0.5">{symbolState.symbol}</span>
+                <span className="text-green-700 text-xs mb-0.5">${symbolState.current_price.toFixed(2)}</span>
+                <span className="text-green-700 text-[10px]">{formatTime(symbolState.last_updated)}</span>
               </div>
-              <div className="grid grid-cols-4 gap-1 text-center">
-                <span className={`font-bold ${symbolState.pct_from_yesterday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+
+              {/* Columns 2-5: 4 Percentage Columns */}
+              <div className="grid grid-cols-4 gap-2 flex-1 text-center items-center">
+                <span className={`font-bold text-xs ${symbolState.pct_from_yesterday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {symbolState.pct_from_yesterday > 0 ? '+' : ''}{symbolState.pct_from_yesterday.toFixed(2)}%
                 </span>
-                <span className={`font-bold ${symbolState.pct_from_open >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`font-bold text-xs ${symbolState.pct_from_open >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {symbolState.pct_from_open > 0 ? '+' : ''}{symbolState.pct_from_open.toFixed(2)}%
                 </span>
-                <span className={`font-bold ${symbolState.pct_from_15min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`font-bold text-xs ${symbolState.pct_from_15min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {symbolState.pct_from_15min > 0 ? '+' : ''}{symbolState.pct_from_15min.toFixed(2)}%
                 </span>
-                <span className={`font-bold ${symbolState.pct_from_5min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`font-bold text-xs ${symbolState.pct_from_5min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {symbolState.pct_from_5min > 0 ? '+' : ''}{symbolState.pct_from_5min.toFixed(2)}%
                 </span>
-              </div>
-              <div className="text-green-700 text-[10px] text-right mt-1">
-                {formatTime(symbolState.last_updated)}
               </div>
             </div>
           ))

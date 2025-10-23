@@ -64,6 +64,11 @@ class PriceMovementScanner:
         self._symbol_counters: Dict[str, int] = {}  # Per-symbol message counters
         self._symbol_priorities: Dict[str, int] = {}  # Cached priority tier per symbol
 
+        # OHLCV fallback for stale symbols
+        self._last_ohlcv_fetch = time.time()
+        self._ohlcv_fetch_interval = 300  # Fetch OHLCV every 5 minutes
+        self._symbol_last_seen: Dict[str, float] = {}  # Track when we last saw each symbol
+
         # Initialize with yesterday's closing prices
         self._load_previous_close_prices()
 
@@ -233,11 +238,17 @@ class PriceMovementScanner:
         last_close = self.last_day_lookup[symbol]
         last_alerted = self.last_alerted_price.get(symbol, last_close)
 
+        # Track when we last saw this symbol (for stale detection)
+        self._symbol_last_seen[symbol] = time.time()
+
         # Get timestamp
         try:
             ts = pd.Timestamp(event.hd.ts_event, unit='ns').tz_localize('UTC').tz_convert('US/Eastern')
         except Exception:
             ts = pd.Timestamp.now('US/Eastern')
+
+        # Periodically fetch OHLCV fallback for stale symbols
+        self._fetch_stale_symbol_prices()
 
         # Update symbol state tracking with priority-based sampling
         # Calculate priority tier based on % move from yesterday
@@ -413,6 +424,74 @@ class PriceMovementScanner:
             print(f"[{self._now()}] ERROR: Failed to flush symbol state to DB: {e}")
             # Don't clear cache on error - will retry on next flush
 
+    def _fetch_stale_symbol_prices(self) -> None:
+        """
+        Fetch latest OHLCV bars for symbols that haven't updated via live stream.
+        This ensures we have accurate prices even when symbols stop trading.
+        """
+        current_time = time.time()
+
+        # Only run every 5 minutes
+        if current_time - self._last_ohlcv_fetch < self._ohlcv_fetch_interval:
+            return
+
+        self._last_ohlcv_fetch = current_time
+
+        # Find symbols that haven't been seen in last 10 minutes
+        stale_threshold = 600  # 10 minutes
+        stale_symbols = []
+
+        for symbol, last_seen in list(self._symbol_last_seen.items())[:100]:  # Limit to 100 symbols per batch
+            if current_time - last_seen > stale_threshold:
+                stale_symbols.append(symbol)
+
+        if not stale_symbols:
+            return
+
+        print(f"[{self._now()}] Fetching OHLCV fallback prices for {len(stale_symbols)} stale symbols...")
+
+        try:
+            client = db.Historical(key=settings.databento_api_key)
+
+            # Fetch last 30 minutes of 1-min bars
+            end_time = pd.Timestamp.now("UTC")
+            start_time = end_time - timedelta(minutes=30)
+
+            data = client.timeseries.get_range(
+                dataset="EQUS.MINI",
+                schema="ohlcv-1m",
+                symbols=stale_symbols[:50],  # Batch of 50 at a time to avoid rate limits
+                start=start_time.isoformat(),
+                end=end_time.isoformat(),
+            )
+
+            df = data.to_df()
+
+            if len(df) > 0:
+                # Group by symbol and get last bar for each
+                for symbol in df.index.get_level_values('symbol').unique():
+                    symbol_data = df.xs(symbol, level='symbol')
+                    if len(symbol_data) > 0:
+                        last_bar = symbol_data.iloc[-1]
+
+                        # Update symbol state with OHLCV close price
+                        ts = pd.Timestamp(last_bar.name, tz='UTC').tz_convert('US/Eastern')
+
+                        # Force update with fallback price
+                        self._update_symbol_state(
+                            symbol=symbol,
+                            current_price=last_bar['close'],
+                            bid=last_bar['close'],  # Use close as bid/ask approximation
+                            ask=last_bar['close'],
+                            spread_pct=0.0,  # No spread data from OHLCV
+                            timestamp=ts
+                        )
+
+                print(f"[{self._now()}] ✓ Updated {len(df.index.get_level_values('symbol').unique())} symbols from OHLCV fallback")
+
+        except Exception as e:
+            print(f"[{self._now()}] WARNING: OHLCV fallback fetch failed: {e}")
+
     def _trigger_alert(
         self,
         event: db.MBP1Msg,
@@ -445,6 +524,17 @@ class PriceMovementScanner:
 
         # Update the last alerted price to current price so we can detect next move
         self.last_alerted_price[symbol] = current_price
+
+        # CRITICAL: Force an immediate symbol_state update when alert triggers
+        # This ensures leaderboards stay in sync with recent alerts
+        self._update_symbol_state(
+            symbol=symbol,
+            current_price=current_price,
+            bid=event.levels[0].bid_px * self.PX_SCALE,
+            ask=event.levels[0].ask_px * self.PX_SCALE,
+            spread_pct=(event.levels[0].ask_px - event.levels[0].bid_px) / ((event.levels[0].ask_px + event.levels[0].bid_px) / 2) if (event.levels[0].ask_px + event.levels[0].bid_px) > 0 else 0,
+            timestamp=ts
+        )
 
         # Call callback if provided
         if self.on_alert:
