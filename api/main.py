@@ -343,10 +343,11 @@ async def get_leaderboard(
             elif abs_pct >= threshold:
                 col_1_to_10.append(symbol)
 
-        # Sort each category by absolute % (descending)
-        col_20_plus.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
-        col_10_to_20.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
-        col_1_to_10.sort(key=lambda x: abs(x.get(pct_field, 0) or 0), reverse=True)
+        # Sort each category by actual % (highest gains first, then negatives)
+        # This ensures +22% comes before -23%
+        col_20_plus.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
+        col_10_to_20.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
+        col_1_to_10.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
 
         result = {
             "baseline": baseline,

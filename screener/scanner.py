@@ -63,6 +63,7 @@ class PriceMovementScanner:
         # Priority-based sampling system
         self._symbol_counters: Dict[str, int] = {}  # Per-symbol message counters
         self._symbol_priorities: Dict[str, int] = {}  # Cached priority tier per symbol
+        self._symbol_last_update: Dict[str, float] = {}  # When each symbol was last DB updated
 
         # OHLCV fallback for stale symbols
         self._last_ohlcv_fetch = time.time()
@@ -250,29 +251,32 @@ class PriceMovementScanner:
         # Periodically fetch OHLCV fallback for stale symbols
         self._fetch_stale_symbol_prices()
 
-        # Update symbol state tracking with priority-based sampling
+        # Update symbol state tracking with TIME-BASED priority sampling
         # Calculate priority tier based on % move from yesterday
         pct_from_yesterday = ((mid - last_close) / last_close) * 100 if last_close else 0
         priority = self._calculate_priority_tier(pct_from_yesterday, self.pct_threshold)
 
-        # Priority-based sampling rates
-        PRIORITY_SAMPLE_RATES = {
-            1: 1,   # Every message (extreme movers, 20%+)
-            2: 3,   # Every 3rd message (strong movers, 10-20%)
-            3: 5,   # Every 5th message (moderate movers, 5-10%)
-            4: 10,  # Every 10th message (normal movers, threshold to 5x)
+        # TIME-BASED update intervals (seconds) instead of message-count based
+        # This ensures symbols update even if they stop trading actively
+        PRIORITY_UPDATE_INTERVALS = {
+            1: 5,    # Update every 5 seconds (extreme movers, 20%+)
+            2: 30,   # Update every 30 seconds (strong movers, 10-20%)
+            3: 60,   # Update every 60 seconds (moderate movers, 5-10%)
+            4: 120,  # Update every 2 minutes (normal movers, threshold to 5x)
         }
 
-        sample_rate = PRIORITY_SAMPLE_RATES.get(priority, 10)
+        update_interval = PRIORITY_UPDATE_INTERVALS.get(priority, 120)
+        current_time = time.time()
 
-        # Initialize per-symbol counter
-        if symbol not in self._symbol_counters:
-            self._symbol_counters[symbol] = 0
+        # Initialize last update time if needed
+        if symbol not in self._symbol_last_update:
+            self._symbol_last_update[symbol] = 0
 
-        self._symbol_counters[symbol] += 1
+        # Check if enough time has passed since last update
+        time_since_last_update = current_time - self._symbol_last_update[symbol]
+        should_update = time_since_last_update >= update_interval
 
-        # Update state if sample rate reached
-        if self._symbol_counters[symbol] % sample_rate == 0:
+        if should_update:
             self._update_symbol_state(
                 symbol=symbol,
                 current_price=mid,
@@ -281,12 +285,14 @@ class PriceMovementScanner:
                 spread_pct=spread_pct,
                 timestamp=ts
             )
+            # Update the last update timestamp
+            self._symbol_last_update[symbol] = current_time
             # Store priority for debugging
             self._symbol_priorities[symbol] = priority
 
-            # Debug Priority 1 symbols - log every update
-            if priority == 1 and self._symbol_counters[symbol] % 100 == 0:
-                print(f"[DEBUG P1] {symbol}: ${mid:.4f}, counter={self._symbol_counters[symbol]}, pct={pct_from_yesterday:.2f}%")
+            # Debug Priority 1 & 2 symbols
+            if priority <= 2:
+                print(f"[DEBUG P{priority}] {symbol}: ${mid:.4f}, pct={pct_from_yesterday:.2f}%, last_update={time_since_last_update:.1f}s ago")
 
         # Cache every 10th price update for display (avoid overhead)
         if not hasattr(self, '_price_sample_counter'):

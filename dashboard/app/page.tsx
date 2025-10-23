@@ -24,12 +24,12 @@ export default function Home() {
           <div className="mb-6 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-1 mb-1">
                   <Image
                     src="/images/juicebot-logo-filled.png"
                     alt="Juicebot Logo"
-                    width={32}
-                    height={32}
+                    width={48}
+                    height={48}
                     className="object-contain"
                   />
                   <Image
@@ -37,7 +37,7 @@ export default function Home() {
                     alt="Juicebot"
                     width={180}
                     height={32}
-                    className="object-contain"
+                    className="object-contain pt-2"
                   />
                 </div>
                 <div className="flex items-center gap-2">

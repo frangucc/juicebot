@@ -84,8 +84,55 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
     }
   }
 
-  const renderColumn = (title: string, data: SymbolState[], colorClass: string) => (
-    <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden flex-1">
+  // Sort function for "SHOW ALL" view - prioritize symbols with most positive columns
+  const sortForShowAll = (data: SymbolState[]) => {
+    return [...data].sort((a, b) => {
+      // Count positive columns for each symbol
+      const aPositive = [
+        a.pct_from_yesterday,
+        a.pct_from_open,
+        a.pct_from_15min,
+        a.pct_from_5min
+      ].filter(v => v > 0).length
+
+      const bPositive = [
+        b.pct_from_yesterday,
+        b.pct_from_open,
+        b.pct_from_15min,
+        b.pct_from_5min
+      ].filter(v => v > 0).length
+
+      // First priority: most positive columns
+      if (aPositive !== bPositive) {
+        return bPositive - aPositive
+      }
+
+      // Second priority: sum of all percentage moves (highest first)
+      const aSum = a.pct_from_yesterday + a.pct_from_open + a.pct_from_15min + a.pct_from_5min
+      const bSum = b.pct_from_yesterday + b.pct_from_open + b.pct_from_15min + b.pct_from_5min
+      return bSum - aSum
+    })
+  }
+
+  const renderColumn = (title: string, data: SymbolState[], colorClass: string) => {
+    // Apply smart sorting based on current filter
+    let sortedData = data
+
+    if (baselineFilter === 'show_all') {
+      // "SHOW ALL": Sort by most positive columns
+      sortedData = sortForShowAll(data)
+    } else {
+      // Single timeframe: Sort by that specific timeframe's percentage
+      // Descending order: +100% → +50% → +0.05% → 0.00% → -0.23% → -50%
+      sortedData = [...data].sort((a, b) => {
+        const aValue = getPercentValue(a, baselineFilter)
+        const bValue = getPercentValue(b, baselineFilter)
+        return bValue - aValue
+      })
+    }
+
+    return (
+      <div className="bg-gray-950 border border-glass rounded-lg overflow-hidden flex-1">
       <div className="p-3 border-b border-glass glass-header">
         <div className="flex items-center justify-between mb-2">
           <div>
@@ -124,12 +171,12 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
         )}
       </div>
       <div className="h-[500px] overflow-y-auto bg-black">
-        {data.length === 0 ? (
+        {sortedData.length === 0 ? (
           <div className="text-center py-12 text-green-800 text-xs">
             No alerts in this range
           </div>
         ) : baselineFilter === 'show_all' ? (
-          data.map(symbolState => (
+          sortedData.map(symbolState => (
             <div
               key={symbolState.symbol}
               className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-start gap-3"
@@ -159,7 +206,7 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
             </div>
           ))
         ) : (
-          data.map(symbolState => {
+          sortedData.map(symbolState => {
             const pctValue = getPercentValue(symbolState, baselineFilter)
             return (
               <div
@@ -182,7 +229,8 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
         )}
       </div>
     </div>
-  )
+    )
+  }
 
   return (
     <div className="mb-6">
