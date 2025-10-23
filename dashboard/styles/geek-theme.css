@@ -1,0 +1,118 @@
+/* Geek Mode Theme - Matrix/Terminal Aesthetic */
+
+:root {
+  /* Geek Mode Colors */
+  --geek-bg-primary: #000000;
+  --geek-bg-secondary: #0a0a0a;
+  --geek-bg-tertiary: #111111;
+
+  --geek-green-primary: #00ff41;
+  --geek-green-secondary: #00cc33;
+  --geek-green-tertiary: #008822;
+  --geek-green-dim: #004411;
+
+  --geek-blue: #0099ff;
+  --geek-cyan: #00ffff;
+  --geek-yellow: #ffff00;
+  --geek-red: #ff0000;
+
+  --geek-border: #00ff4133;
+  --geek-border-strong: #00ff4166;
+
+  --geek-text-primary: #00ff41;
+  --geek-text-secondary: #00cc33;
+  --geek-text-dim: #008822;
+  --geek-text-dimmer: #004411;
+}
+
+/* Global Geek Mode Styles */
+.geek-mode {
+  background-color: var(--geek-bg-primary);
+  color: var(--geek-text-primary);
+  font-family: 'Courier New', monospace;
+}
+
+.geek-bg-card {
+  background-color: var(--geek-bg-secondary);
+  border: 1px solid var(--geek-border-strong);
+}
+
+.geek-bg-dark {
+  background-color: var(--geek-bg-tertiary);
+}
+
+.geek-border {
+  border-color: var(--geek-border);
+}
+
+.geek-border-strong {
+  border-color: var(--geek-border-strong);
+}
+
+.geek-text-primary {
+  color: var(--geek-text-primary);
+}
+
+.geek-text-secondary {
+  color: var(--geek-text-secondary);
+}
+
+.geek-text-dim {
+  color: var(--geek-text-dim);
+}
+
+.geek-text-dimmer {
+  color: var(--geek-text-dimmer);
+}
+
+.geek-glow {
+  text-shadow: 0 0 10px var(--geek-green-primary);
+}
+
+.geek-btn-primary {
+  background-color: var(--geek-green-dim);
+  border: 1px solid var(--geek-border-strong);
+  color: var(--geek-text-primary);
+  transition: all 0.2s;
+}
+
+.geek-btn-primary:hover {
+  background-color: var(--geek-green-tertiary);
+  border-color: var(--geek-green-secondary);
+  box-shadow: 0 0 10px var(--geek-green-primary);
+}
+
+/* Animated cursor effect */
+.geek-cursor::after {
+  content: '▊';
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Scan line effect */
+.geek-scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.geek-scanline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(transparent, var(--geek-green-primary), transparent);
+  animation: scan 4s linear infinite;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+@keyframes scan {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(600px); }
+}

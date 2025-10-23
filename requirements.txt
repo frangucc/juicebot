@@ -1,0 +1,45 @@
+# Core
+python-dotenv==1.0.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Market Data
+databento>=0.44.2  # Updated for Python 3.13 support
+pandas>=2.2.0  # Updated for Python 3.13 support
+numpy>=1.26.0  # Updated for Python 3.13 support
+
+# Database
+supabase==2.3.4
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+
+# API
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+websockets==12.0
+
+# SMS & AI
+twilio==8.11.1
+anthropic==0.18.1
+openai==1.10.0
+
+# Async & Utilities
+httpx==0.26.0
+aiohttp==3.9.1
+redis==5.0.1
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Technical Analysis (optional - can add later if needed)
+# pandas-ta==0.3.14b0
+# ta-lib==0.4.28  # Requires system library, skip for now
+
+# Temporal (Workflow orchestration)
+temporalio==1.5.1
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.12.1
+ruff==0.1.11

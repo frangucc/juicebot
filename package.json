@@ -1,0 +1,31 @@
+{
+  "name": "trading-sms-assistant",
+  "version": "0.1.0",
+  "description": "Real-time stock screener with SMS alerts",
+  "scripts": {
+    "dev": "./start.sh",
+    "start": "./start.sh",
+    "stop": "./stop.sh",
+    "status": "./status.sh",
+    "setup": "./run.sh setup",
+    "test": "./run.sh test",
+    "screener": "./run.sh screener",
+    "api": "./run.sh api",
+    "dashboard": "cd dashboard && npm run dev",
+    "logs:screener": "tail -f .pids/screener.log",
+    "logs:api": "tail -f .pids/api.log",
+    "logs:dashboard": "tail -f .pids/dashboard.log",
+    "logs:all": "tail -f .pids/*.log",
+    "clean": "rm -rf .pids venv dashboard/node_modules dashboard/.next",
+    "restart": "npm run stop && sleep 2 && npm run start"
+  },
+  "keywords": [
+    "trading",
+    "stocks",
+    "screener",
+    "sms",
+    "alerts"
+  ],
+  "author": "",
+  "license": "PRIVATE"
+}
