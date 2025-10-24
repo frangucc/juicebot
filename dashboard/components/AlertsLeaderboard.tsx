@@ -6,9 +6,12 @@ interface SymbolState {
   symbol: string
   current_price: number
   pct_from_yesterday: number
+  pct_from_pre: number | null
   pct_from_open: number
+  pct_from_post: number | null
   pct_from_15min: number
   pct_from_5min: number
+  pct_from_1min: number
   hod_pct: number
   last_updated: string
 }
@@ -16,12 +19,16 @@ interface SymbolState {
 interface AlertsLeaderboardProps {
   threshold: number
   priceFilter: 'all' | 'small' | 'mid' | 'large'
+  baselineFilter: 'show_all' | 'yesterday' | 'pre' | 'open' | 'post' | '15min' | '5min'
+  setBaselineFilter: (value: 'show_all' | 'yesterday' | 'pre' | 'open' | 'post' | '15min' | '5min') => void
+  gapDirection: 'up' | 'down'
+  setGapDirection: (value: 'up' | 'down') => void
+  searchQuery: string
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardProps) {
-  const [baselineFilter, setBaselineFilter] = useState<'show_all' | 'yesterday' | 'open' | '15min' | '5min'>('yesterday')
+export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setBaselineFilter, gapDirection, setGapDirection, searchQuery }: AlertsLeaderboardProps) {
   const [leaderboardData, setLeaderboardData] = useState<{
     col_20_plus: SymbolState[]
     col_10_to_20: SymbolState[]
@@ -31,22 +38,84 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
     col_10_to_20: [],
     col_1_to_10: []
   })
+  const [flashingRows, setFlashingRows] = useState<Map<string, 'up' | 'down'>>(new Map())
+  const [previousData, setPreviousData] = useState<{
+    col_20_plus: SymbolState[]
+    col_10_to_20: SymbolState[]
+    col_1_to_10: SymbolState[]
+  }>({
+    col_20_plus: [],
+    col_10_to_20: [],
+    col_1_to_10: []
+  })
+
+  // Helper function to detect if a row has been updated and determine direction
+  const detectUpdates = (newData: SymbolState[], oldData: SymbolState[], column: string) => {
+    const updatedSymbols = new Map<string, 'up' | 'down'>()
+
+    newData.forEach(newSymbol => {
+      const oldSymbol = oldData.find(s => s.symbol === newSymbol.symbol)
+      if (oldSymbol) {
+        // Check if the primary percentage value (current_price) has changed
+        // Determine direction based on price change
+        const priceChanged = newSymbol.current_price !== oldSymbol.current_price
+
+        if (priceChanged) {
+          const direction = newSymbol.current_price > oldSymbol.current_price ? 'up' : 'down'
+          updatedSymbols.set(`${column}-${newSymbol.symbol}`, direction)
+        } else if (
+          // Also check if percentage values changed without price change
+          newSymbol.pct_from_yesterday !== oldSymbol.pct_from_yesterday ||
+          newSymbol.pct_from_pre !== oldSymbol.pct_from_pre ||
+          newSymbol.pct_from_open !== oldSymbol.pct_from_open ||
+          newSymbol.pct_from_post !== oldSymbol.pct_from_post ||
+          newSymbol.pct_from_15min !== oldSymbol.pct_from_15min ||
+          newSymbol.pct_from_5min !== oldSymbol.pct_from_5min
+        ) {
+          // Use yesterday's percentage change as the primary indicator
+          const direction = newSymbol.pct_from_yesterday > oldSymbol.pct_from_yesterday ? 'up' : 'down'
+          updatedSymbols.set(`${column}-${newSymbol.symbol}`, direction)
+        }
+      }
+    })
+
+    return updatedSymbols
+  }
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
         // Convert price filter to query param
         const priceParam = priceFilter !== 'all' ? `&price_filter=${priceFilter}` : ''
+
+        // Map baseline filter to API parameter (skip "show_all" - use yesterday as default)
+        const baselineParam = baselineFilter === 'show_all' ? 'yesterday' : baselineFilter
+
         const response = await fetch(
-          `${API_URL}/symbols/leaderboard?threshold=${threshold}&baseline=yesterday${priceParam}`
+          `${API_URL}/symbols/leaderboard?threshold=${threshold}&baseline=${baselineParam}&direction=${gapDirection}${priceParam}`
         )
         if (response.ok) {
           const data = await response.json()
-          setLeaderboardData({
+          const newData = {
             col_20_plus: data.col_20_plus || [],
             col_10_to_20: data.col_10_to_20 || [],
             col_1_to_10: data.col_1_to_10 || []
-          })
+          }
+
+          // Detect updates and trigger flash
+          const updates = new Map<string, 'up' | 'down'>()
+          detectUpdates(newData.col_20_plus, previousData.col_20_plus, 'col_20_plus').forEach((direction, key) => updates.set(key, direction))
+          detectUpdates(newData.col_10_to_20, previousData.col_10_to_20, 'col_10_to_20').forEach((direction, key) => updates.set(key, direction))
+          detectUpdates(newData.col_1_to_10, previousData.col_1_to_10, 'col_1_to_10').forEach((direction, key) => updates.set(key, direction))
+
+          if (updates.size > 0) {
+            setFlashingRows(updates)
+            // Clear flashing state after animation completes
+            setTimeout(() => setFlashingRows(new Map()), 2500)
+          }
+
+          setPreviousData(newData)
+          setLeaderboardData(newData)
         }
       } catch (error) {
         console.error('Failed to fetch leaderboard:', error)
@@ -56,11 +125,18 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
     fetchLeaderboard()
     const interval = setInterval(fetchLeaderboard, 2000)
     return () => clearInterval(interval)
-  }, [threshold, priceFilter])
+  }, [threshold, priceFilter, baselineFilter, gapDirection, previousData])
 
-  const col20Plus = leaderboardData.col_20_plus
-  const col10To20 = leaderboardData.col_10_to_20
-  const col1To10 = leaderboardData.col_1_to_10
+  // Filter data based on search query
+  const filterBySearch = (data: SymbolState[]) => {
+    if (!searchQuery.trim()) return data
+    const query = searchQuery.toUpperCase().trim()
+    return data.filter(item => item.symbol.toUpperCase().includes(query))
+  }
+
+  const col20Plus = filterBySearch(leaderboardData.col_20_plus)
+  const col10To20 = filterBySearch(leaderboardData.col_10_to_20)
+  const col1To10 = filterBySearch(leaderboardData.col_1_to_10)
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -77,30 +153,54 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
   const getPercentValue = (symbolState: SymbolState, baseline: string) => {
     switch (baseline) {
       case 'yesterday': return symbolState.pct_from_yesterday
+      case 'pre': return symbolState.pct_from_pre
       case 'open': return symbolState.pct_from_open
+      case 'post': return symbolState.pct_from_post
       case '15min': return symbolState.pct_from_15min
       case '5min': return symbolState.pct_from_5min
       default: return symbolState.pct_from_yesterday
     }
   }
 
+  // Format percentage in shortened format for SHOW ALL view
+  const formatShortPct = (value: number | null) => {
+    if (value === null) return '--'
+
+    const absValue = Math.abs(value)
+
+    // For values >= 1.0, show one decimal (42.52% -> 42.5)
+    // For values < 1.0, drop leading zero (0.45% -> .45)
+    if (absValue >= 1.0) {
+      return absValue.toFixed(1)
+    } else {
+      // Remove leading zero: 0.45 -> .45
+      return absValue.toFixed(2).replace(/^0\./, '.')
+    }
+  }
+
   // Sort function for "SHOW ALL" view - prioritize symbols with most positive columns
   const sortForShowAll = (data: SymbolState[]) => {
     return [...data].sort((a, b) => {
-      // Count positive columns for each symbol
+      // Count positive columns for each symbol (including PRE, POST, and 1min)
       const aPositive = [
         a.pct_from_yesterday,
+        a.pct_from_pre,
         a.pct_from_open,
+        a.pct_from_post,
         a.pct_from_15min,
-        a.pct_from_5min
-      ].filter(v => v > 0).length
+        a.pct_from_5min,
+        a.pct_from_1min
+      ].filter(v => v !== null && v > 0).length
 
       const bPositive = [
         b.pct_from_yesterday,
+        b.pct_from_pre,
         b.pct_from_open,
+        b.pct_from_post,
         b.pct_from_15min,
-        b.pct_from_5min
-      ].filter(v => v > 0).length
+        b.pct_from_5min,
+        b.pct_from_1min
+      ].filter(v => v !== null && v > 0).length
 
       // First priority: most positive columns
       if (aPositive !== bPositive) {
@@ -108,13 +208,13 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
       }
 
       // Second priority: sum of all percentage moves (highest first)
-      const aSum = a.pct_from_yesterday + a.pct_from_open + a.pct_from_15min + a.pct_from_5min
-      const bSum = b.pct_from_yesterday + b.pct_from_open + b.pct_from_15min + b.pct_from_5min
+      const aSum = (a.pct_from_yesterday || 0) + (a.pct_from_pre || 0) + (a.pct_from_open || 0) + (a.pct_from_post || 0) + (a.pct_from_15min || 0) + (a.pct_from_5min || 0) + (a.pct_from_1min || 0)
+      const bSum = (b.pct_from_yesterday || 0) + (b.pct_from_pre || 0) + (b.pct_from_open || 0) + (b.pct_from_post || 0) + (b.pct_from_15min || 0) + (b.pct_from_5min || 0) + (b.pct_from_1min || 0)
       return bSum - aSum
     })
   }
 
-  const renderColumn = (title: string, data: SymbolState[], colorClass: string) => {
+  const renderColumn = (title: string, data: SymbolState[], colorClass: string, columnId: string) => {
     // Apply smart sorting based on current filter
     let sortedData = data
 
@@ -143,29 +243,44 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
               {data.length} active
             </p>
           </div>
-          <select
-            value={baselineFilter}
-            onChange={(e) => setBaselineFilter(e.target.value as typeof baselineFilter)}
-            className="bg-gray-900 text-teal text-xs border border-glass rounded px-2 py-1 cursor-pointer hover:bg-gray-800 transition-colors"
-          >
-            <option value="show_all">SHOW ALL</option>
-            <option value="yesterday">% Yest</option>
-            <option value="open">% Open</option>
-            <option value="15min">% 15M</option>
-            <option value="5min">% 5M</option>
-          </select>
+          <div className="flex gap-2">
+            <select
+              value={gapDirection}
+              onChange={(e) => setGapDirection(e.target.value as 'up' | 'down')}
+              className="bg-gray-900 text-teal text-xs border border-glass rounded px-2 py-1 cursor-pointer hover:bg-gray-800 transition-colors"
+            >
+              <option value="up">GAP UPS</option>
+              <option value="down">GAP DOWNS</option>
+            </select>
+            <select
+              value={baselineFilter}
+              onChange={(e) => setBaselineFilter(e.target.value as typeof baselineFilter)}
+              className="bg-gray-900 text-teal text-xs border border-glass rounded px-2 py-1 cursor-pointer hover:bg-gray-800 transition-colors"
+            >
+              <option value="show_all">SHOW ALL</option>
+              <option value="yesterday">% Yest</option>
+              <option value="pre">% PRE</option>
+              <option value="open">% OPEN</option>
+              <option value="post">% POST</option>
+              <option value="15min">% 15M</option>
+              <option value="5min">% 5M</option>
+            </select>
+          </div>
         </div>
         {baselineFilter === 'show_all' && (
           <div className="flex items-start gap-3 mt-2 pt-2 border-t border-glass">
             {/* Empty space for column 1 (ticker/price/time) */}
             <div className="w-20 flex-shrink-0"></div>
 
-            {/* Headers for columns 2-5 */}
-            <div className="grid grid-cols-4 gap-2 flex-1 text-[10px] text-teal-dark uppercase text-center">
-              <div>% Yest</div>
-              <div>% Open</div>
-              <div>% 15M</div>
-              <div>% 5M</div>
+            {/* Headers for columns 2-8 (added PRE, POST, and 1M) */}
+            <div className="grid grid-cols-7 gap-2 flex-1 text-[10px] text-teal-dark uppercase text-center">
+              <div>Yest</div>
+              <div>PRE</div>
+              <div>OPEN</div>
+              <div>POST</div>
+              <div>15M</div>
+              <div>5M</div>
+              <div>1M</div>
             </div>
           </div>
         )}
@@ -176,11 +291,15 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
             No alerts in this range
           </div>
         ) : baselineFilter === 'show_all' ? (
-          sortedData.map(symbolState => (
-            <div
-              key={symbolState.symbol}
-              className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-start gap-3"
-            >
+          sortedData.map(symbolState => {
+            const rowKey = `${columnId}-${symbolState.symbol}`
+            const flashDirection = flashingRows.get(rowKey)
+            const flashClass = flashDirection === 'up' ? 'row-flash-green' : flashDirection === 'down' ? 'row-flash-red' : ''
+            return (
+              <div
+                key={symbolState.symbol}
+                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-start gap-3 ${flashClass}`}
+              >
               {/* Column 1: Symbol, Price, Timestamp (stacked vertically) */}
               <div className="flex flex-col w-20 flex-shrink-0">
                 <span className="font-bold text-green-300 text-sm mb-0.5">{symbolState.symbol}</span>
@@ -188,35 +307,48 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
                 <span className="text-green-700 text-[10px]">{formatTime(symbolState.last_updated)}</span>
               </div>
 
-              {/* Columns 2-5: 4 Percentage Columns */}
-              <div className="grid grid-cols-4 gap-2 flex-1 text-center items-center">
+              {/* Columns 2-8: 7 Percentage Columns (added PRE, POST, and 1M) */}
+              <div className="grid grid-cols-7 gap-2 flex-1 text-center items-center">
                 <span className={`font-bold text-xs ${symbolState.pct_from_yesterday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {symbolState.pct_from_yesterday > 0 ? '+' : ''}{symbolState.pct_from_yesterday.toFixed(2)}%
+                  {formatShortPct(symbolState.pct_from_yesterday)}
+                </span>
+                <span className={`font-bold text-xs ${symbolState.pct_from_pre !== null ? (symbolState.pct_from_pre >= 0 ? 'text-green-400' : 'text-red-400') : 'text-gray-600'}`}>
+                  {formatShortPct(symbolState.pct_from_pre)}
                 </span>
                 <span className={`font-bold text-xs ${symbolState.pct_from_open >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {symbolState.pct_from_open > 0 ? '+' : ''}{symbolState.pct_from_open.toFixed(2)}%
+                  {formatShortPct(symbolState.pct_from_open)}
+                </span>
+                <span className={`font-bold text-xs ${symbolState.pct_from_post !== null ? (symbolState.pct_from_post >= 0 ? 'text-green-400' : 'text-red-400') : 'text-gray-600'}`}>
+                  {formatShortPct(symbolState.pct_from_post)}
                 </span>
                 <span className={`font-bold text-xs ${symbolState.pct_from_15min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {symbolState.pct_from_15min > 0 ? '+' : ''}{symbolState.pct_from_15min.toFixed(2)}%
+                  {formatShortPct(symbolState.pct_from_15min)}
                 </span>
                 <span className={`font-bold text-xs ${symbolState.pct_from_5min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {symbolState.pct_from_5min > 0 ? '+' : ''}{symbolState.pct_from_5min.toFixed(2)}%
+                  {formatShortPct(symbolState.pct_from_5min)}
+                </span>
+                <span className={`font-bold text-xs ${symbolState.pct_from_1min >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatShortPct(symbolState.pct_from_1min)}
                 </span>
               </div>
             </div>
-          ))
+            )
+          })
         ) : (
           sortedData.map(symbolState => {
             const pctValue = getPercentValue(symbolState, baselineFilter)
+            const rowKey = `${columnId}-${symbolState.symbol}`
+            const flashDirection = flashingRows.get(rowKey)
+            const flashClass = flashDirection === 'up' ? 'row-flash-green' : flashDirection === 'down' ? 'row-flash-red' : ''
             return (
               <div
                 key={symbolState.symbol}
-                className="border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs"
+                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs ${flashClass}`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-green-300">{symbolState.symbol}</span>
-                  <span className={`font-bold ${colorClass}`}>
-                    {pctValue > 0 ? '+' : ''}{pctValue.toFixed(2)}%
+                  <span className={`font-bold ${pctValue !== null ? colorClass : 'text-gray-600'}`}>
+                    {pctValue !== null ? `${pctValue > 0 ? '+' : ''}${pctValue.toFixed(2)}%` : '--'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-green-700">
@@ -236,16 +368,16 @@ export function AlertsLeaderboard({ threshold, priceFilter }: AlertsLeaderboardP
     <div className="mb-6">
       {/* Desktop: 3 columns side by side */}
       <div className="hidden md:grid md:grid-cols-3 gap-4">
-        {renderColumn('20%+', col20Plus, 'text-red-400')}
-        {renderColumn('10-20%', col10To20, 'text-yellow-400')}
-        {renderColumn('1-10%', col1To10, 'text-green-400')}
+        {renderColumn('20%+', col20Plus, 'text-red-400', 'col_20_plus')}
+        {renderColumn('10-20%', col10To20, 'text-yellow-400', 'col_10_to_20')}
+        {renderColumn('1-10%', col1To10, 'text-green-400', 'col_1_to_10')}
       </div>
 
       {/* Mobile: Single column view with hint */}
       <div className="md:hidden">
         <div className="overflow-hidden">
           <div className="snap-start shrink-0 w-full">
-            {renderColumn('20%+', col20Plus, 'text-red-400')}
+            {renderColumn('20%+', col20Plus, 'text-red-400', 'col_20_plus')}
           </div>
         </div>
         <p className="text-center text-xs text-green-700 mt-2">
