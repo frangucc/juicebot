@@ -338,13 +338,16 @@ class PriceMovementScanner:
                 self.bar_aggregator.update_priority_symbols(self._priority_symbols_set)
                 self._last_priority_update = current_time
 
-            # Force priority bars every minute
+        # GLOBAL heartbeat check - runs on EVERY message to ensure continuity
+        # This is independent of priority and ensures bars are forced every minute
+        if self.bar_aggregator:
             if not hasattr(self, '_last_priority_bar_check'):
                 self._last_priority_bar_check = time.time()
 
             if current_time - self._last_priority_bar_check >= 60:
                 self.bar_aggregator.ensure_priority_bars(ts)
                 self._last_priority_bar_check = current_time
+                print(f"[BarAggregator] Forced priority bars at {ts}, tracking {len(self._priority_symbols_set if hasattr(self, '_priority_symbols_set') else [])} symbols")
 
         # Cache every 10th price update for display (avoid overhead)
         if not hasattr(self, '_price_sample_counter'):
