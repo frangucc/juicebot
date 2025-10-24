@@ -323,6 +323,29 @@ class PriceMovementScanner:
             if priority <= 2:
                 print(f"[DEBUG P{priority}] {symbol}: ${price:.4f}, pct={pct_from_yesterday:.2f}%, last_update={time_since_last_update:.1f}s ago")
 
+        # Ensure priority bars every minute (for leaderboard stocks with P1/P2)
+        if self.bar_aggregator and priority <= 2:
+            # Check if we need to update priority symbols list (every 30 seconds)
+            if not hasattr(self, '_last_priority_update'):
+                self._last_priority_update = time.time()
+                self._priority_symbols_set = set()
+
+            # Collect priority symbols
+            self._priority_symbols_set.add(symbol)
+
+            # Update bar aggregator every 30 seconds with latest priority list
+            if current_time - self._last_priority_update >= 30:
+                self.bar_aggregator.update_priority_symbols(self._priority_symbols_set)
+                self._last_priority_update = current_time
+
+            # Force priority bars every minute
+            if not hasattr(self, '_last_priority_bar_check'):
+                self._last_priority_bar_check = time.time()
+
+            if current_time - self._last_priority_bar_check >= 60:
+                self.bar_aggregator.ensure_priority_bars(ts)
+                self._last_priority_bar_check = current_time
+
         # Cache every 10th price update for display (avoid overhead)
         if not hasattr(self, '_price_sample_counter'):
             self._price_sample_counter = 0

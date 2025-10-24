@@ -81,6 +81,10 @@ class BarAggregator:
         self._bars_created_count = 0
         self._bars_flushed_count = 0
 
+        # Track priority symbols that need guaranteed bars every minute
+        self.priority_symbols: set = set()  # Symbols that must have bars every minute
+        self._last_priority_check = time.time()
+
         # Database connection (only if writes enabled)
         self._db_conn = None
         if self.enable_db_writes:
@@ -226,6 +230,50 @@ class BarAggregator:
             "pending_flush_count": len(self.completed_bars),
             "db_writes_enabled": self.enable_db_writes
         }
+
+    def update_priority_symbols(self, symbols: set) -> None:
+        """
+        Update the list of priority symbols that need bars every minute.
+
+        Args:
+            symbols: Set of symbol strings that are in the leaderboard
+        """
+        self.priority_symbols = symbols
+
+    def ensure_priority_bars(self, current_time: pd.Timestamp) -> None:
+        """
+        Ensure all priority symbols have bars for the current minute.
+        Called every minute to guarantee bar continuity for leaderboard stocks.
+
+        Args:
+            current_time: Current timestamp
+        """
+        bar_timestamp = current_time.floor('1min')
+
+        for symbol in self.priority_symbols:
+            # If symbol has no current bar, skip (needs at least one trade to establish price)
+            if symbol not in self.current_bars:
+                continue
+
+            current_bar = self.current_bars[symbol]
+
+            # If current bar is from a previous minute, complete it and start new one
+            if current_bar.timestamp < bar_timestamp:
+                # Complete the old bar
+                self.completed_bars[symbol] = current_bar
+                self._bars_created_count += 1
+
+                # Start new bar with last known price (zero volume)
+                self.current_bars[symbol] = Bar(
+                    symbol=symbol,
+                    timestamp=bar_timestamp,
+                    open_price=current_bar.close,  # Use last close as open
+                    high_price=current_bar.close,
+                    low_price=current_bar.close,
+                    close_price=current_bar.close,
+                    volume=0,  # No trades this minute
+                    trade_count=0
+                )
 
     def force_flush(self) -> None:
         """Force flush all completed bars immediately."""
