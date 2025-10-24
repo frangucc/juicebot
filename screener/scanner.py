@@ -205,8 +205,8 @@ class PriceMovementScanner:
                 print(f"[DEBUG] All 11938 symbols mapped!")
             return
 
-        # Only process MBP-1 (top of book) messages
-        if not isinstance(event, db.MBP1Msg):
+        # Only process Trade messages (actual executions with volume)
+        if not isinstance(event, db.TradeMsg):
             return
 
         # Get symbol from instrument ID
@@ -214,9 +214,9 @@ class PriceMovementScanner:
         if not symbol or symbol not in self.last_day_lookup:
             return
 
-        # Extract bid and ask prices
-        bid = event.levels[0].bid_px
-        ask = event.levels[0].ask_px
+        # Extract trade price and volume
+        trade_price_raw = event.price
+        trade_volume = event.size
 
         # Debug WGRX specifically
         is_wgrx = symbol == "WGRX"
@@ -226,27 +226,23 @@ class PriceMovementScanner:
         if is_wgrx:
             self._wgrx_debug_count += 1
 
-        # Skip if one side of book is empty
-        if bid == self.PX_NULL or ask == self.PX_NULL:
+        # Skip if price is undefined
+        if trade_price_raw == self.PX_NULL:
             if is_wgrx and self._wgrx_debug_count % 100 == 0:
-                print(f"[DEBUG WGRX] Skipped - empty book (bid={bid}, ask={ask})")
+                print(f"[DEBUG WGRX] Skipped - undefined price")
             return
 
-        # Calculate mid price and spread
-        bid_price = bid * self.PX_SCALE
-        ask_price = ask * self.PX_SCALE
-        mid = (bid_price + ask_price) * 0.5
-        spread_pct = (ask_price - bid_price) / mid if mid > 0 else 0
+        # Convert price from fixed-precision format
+        price = trade_price_raw * self.PX_SCALE
 
-        # Skip illiquid stocks with wide spreads (likely erratic pricing)
-        # If spread > 2%, skip - these create false alerts
-        if spread_pct > 0.02:
+        # Skip if price is invalid
+        if price <= 0:
             if is_wgrx and self._wgrx_debug_count % 100 == 0:
-                print(f"[DEBUG WGRX] Skipped - wide spread ({spread_pct*100:.2f}%)")
+                print(f"[DEBUG WGRX] Skipped - invalid price (${price:.4f})")
             return
 
         if is_wgrx and self._wgrx_debug_count % 100 == 0:
-            print(f"[DEBUG WGRX] Processing! bid=${bid_price:.4f}, ask=${ask_price:.4f}, spread={spread_pct*100:.2f}%")
+            print(f"[DEBUG WGRX] Processing trade! price=${price:.4f}, volume={trade_volume}")
 
         last_close = self.last_day_lookup[symbol]
         last_alerted = self.last_alerted_price.get(symbol, last_close)
@@ -261,23 +257,23 @@ class PriceMovementScanner:
             ts = pd.Timestamp.now('US/Eastern')
 
         # Calculate percentage from yesterday (needed for both bar aggregator and broadcaster)
-        pct_from_yesterday = ((mid - last_close) / last_close) * 100 if last_close else 0
+        pct_from_yesterday = ((price - last_close) / last_close) * 100 if last_close else 0
 
         # Add tick to bar aggregator for 1-minute OHLCV bars (BEFORE filters to capture ALL symbols)
         if self.bar_aggregator:
             self.bar_aggregator.add_tick(
                 symbol=symbol,
-                price=mid,
+                price=price,
                 timestamp=ts,
-                volume=0  # Volume not available from MBP-1
+                volume=trade_volume  # ✅ Real trade volume from TRADES schema!
             )
 
         # Broadcast price update to WebSocket clients (real-time UI updates)
         self.price_broadcaster.broadcast_price(
             symbol=symbol,
-            price=mid,
-            bid=bid_price,
-            ask=ask_price,
+            price=price,
+            bid=price,  # No bid/ask in trades, use trade price
+            ask=price,  # No bid/ask in trades, use trade price
             pct_from_yesterday=pct_from_yesterday,
             timestamp=ts.isoformat()
         )
@@ -312,10 +308,10 @@ class PriceMovementScanner:
         if should_update:
             self._update_symbol_state(
                 symbol=symbol,
-                current_price=mid,
-                bid=bid_price,
-                ask=ask_price,
-                spread_pct=spread_pct,
+                current_price=price,
+                bid=price,  # Trades don't have bid/ask, use price
+                ask=price,  # Trades don't have bid/ask, use price
+                spread_pct=0.0,  # No spread in trades
                 timestamp=ts
             )
             # Update the last update timestamp
@@ -325,7 +321,7 @@ class PriceMovementScanner:
 
             # Debug Priority 1 & 2 symbols
             if priority <= 2:
-                print(f"[DEBUG P{priority}] {symbol}: ${mid:.4f}, pct={pct_from_yesterday:.2f}%, last_update={time_since_last_update:.1f}s ago")
+                print(f"[DEBUG P{priority}] {symbol}: ${price:.4f}, pct={pct_from_yesterday:.2f}%, last_update={time_since_last_update:.1f}s ago")
 
         # Cache every 10th price update for display (avoid overhead)
         if not hasattr(self, '_price_sample_counter'):
@@ -334,13 +330,13 @@ class PriceMovementScanner:
         if self._price_sample_counter % 10 == 0:
             price_cache.add_price(
                 symbol=symbol,
-                bid=bid_price,
-                ask=ask_price,
-                mid=mid
+                bid=price,  # Use trade price
+                ask=price,  # Use trade price
+                mid=price   # Use trade price
             )
 
         # Calculate percentage move from LAST ALERTED PRICE (not yesterday's close!)
-        abs_r = abs(mid - last_alerted) / last_alerted
+        abs_r = abs(price - last_alerted) / last_alerted
 
         # 1% threshold for meaningful price movements
         threshold = 0.01  # 1%
@@ -352,7 +348,7 @@ class PriceMovementScanner:
             last_alert = self.last_alert_time.get(symbol, 0)
 
             if current_time - last_alert >= 30:  # 30 second cooldown
-                self._trigger_alert(event, symbol, mid, last_alerted, abs_r)
+                self._trigger_alert(event, symbol, price, last_alerted, abs_r)
                 self.last_alert_time[symbol] = current_time
 
     def _update_symbol_state(
@@ -536,7 +532,7 @@ class PriceMovementScanner:
 
     def _trigger_alert(
         self,
-        event: db.MBP1Msg,
+        event: db.TradeMsg,  # ✅ Changed from MBP1Msg to TradeMsg
         symbol: str,
         current_price: float,
         last_reference_price: float,
@@ -554,14 +550,12 @@ class PriceMovementScanner:
             "previous_close": last_reference_price,
             "pct_move": pct_move * 100,
             "timestamp": ts,
-            "bid": event.levels[0].bid_px * self.PX_SCALE,
-            "ask": event.levels[0].ask_px * self.PX_SCALE,
-            "bid_size": event.levels[0].bid_sz,
-            "ask_size": event.levels[0].ask_sz,
+            "volume": event.size,  # ✅ Trade volume instead of bid/ask
+            "side": event.side,    # ✅ Trade side (buy/sell)
         }
 
         # Print to console with flush to ensure it appears immediately
-        alert_msg = f"[{ts.isoformat()}] {symbol} moved by {pct_move * 100:.2f}% (current: {current_price:.4f}, last: {last_reference_price:.4f})"
+        alert_msg = f"[{ts.isoformat()}] {symbol} moved by {pct_move * 100:.2f}% (current: {current_price:.4f}, last: {last_reference_price:.4f}, vol: {event.size})"
         print(alert_msg, flush=True)
 
         # Update the last alerted price to current price so we can detect next move
@@ -572,9 +566,9 @@ class PriceMovementScanner:
         self._update_symbol_state(
             symbol=symbol,
             current_price=current_price,
-            bid=event.levels[0].bid_px * self.PX_SCALE,
-            ask=event.levels[0].ask_px * self.PX_SCALE,
-            spread_pct=(event.levels[0].ask_px - event.levels[0].bid_px) / ((event.levels[0].ask_px + event.levels[0].bid_px) / 2) if (event.levels[0].ask_px + event.levels[0].bid_px) > 0 else 0,
+            bid=current_price,  # Use trade price
+            ask=current_price,  # Use trade price
+            spread_pct=0.0,     # No spread in trades
             timestamp=ts
         )
 

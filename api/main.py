@@ -234,13 +234,14 @@ async def get_recent_prices(limit: int = 20):
 
 
 @app.get("/bars/{symbol}")
-async def get_bars(symbol: str, limit: int = 500):
+async def get_bars(symbol: str, limit: int = 500, include_legacy: bool = False):
     """
     Get 1-minute OHLCV bars for a specific symbol.
 
     Args:
         symbol: Stock symbol (e.g., 'AAPL')
         limit: Number of bars to return (default: 500, max: 1000)
+        include_legacy: Include legacy MBP-1 data (volume=0) (default: False)
 
     Returns:
         List of 1-minute OHLCV bars with timestamp, open, high, low, close, volume
@@ -250,12 +251,13 @@ async def get_bars(symbol: str, limit: int = 500):
         limit = min(limit, 1000)
 
         # Query price_bars table
-        response = supabase.table("price_bars") \
-            .select("*") \
-            .eq("symbol", symbol.upper()) \
-            .order("timestamp", desc=True) \
-            .limit(limit) \
-            .execute()
+        query = supabase.table("price_bars").select("*").eq("symbol", symbol.upper())
+
+        # ✅ Filter out legacy data unless explicitly requested
+        if not include_legacy:
+            query = query.or_("is_legacy.is.null,is_legacy.eq.false")
+
+        response = query.order("timestamp", desc=True).limit(limit).execute()
 
         if not response.data:
             raise HTTPException(status_code=404, detail=f"No bar data found for symbol {symbol}")

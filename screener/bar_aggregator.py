@@ -57,7 +57,9 @@ class Bar:
             "low": self.low,
             "close": self.close,
             "volume": self.volume,
-            "trade_count": self.trade_count
+            "trade_count": self.trade_count,
+            "is_legacy": False,  # ✅ New bars are not legacy
+            "data_source": "trades"  # ✅ Mark source as trades
         }
 
 
@@ -180,20 +182,24 @@ class BarAggregator:
                     bar.low,
                     bar.close,
                     bar.volume,
-                    bar.trade_count
+                    bar.trade_count,
+                    False,    # is_legacy
+                    "trades"  # data_source
                 ))
 
             # Execute batch insert with ON CONFLICT to handle duplicates
             insert_query = """
-                INSERT INTO price_bars (symbol, timestamp, open, high, low, close, volume, trade_count)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO price_bars (symbol, timestamp, open, high, low, close, volume, trade_count, is_legacy, data_source)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (symbol, timestamp) DO UPDATE SET
                     open = EXCLUDED.open,
                     high = EXCLUDED.high,
                     low = EXCLUDED.low,
                     close = EXCLUDED.close,
                     volume = EXCLUDED.volume,
-                    trade_count = EXCLUDED.trade_count
+                    trade_count = EXCLUDED.trade_count,
+                    is_legacy = EXCLUDED.is_legacy,
+                    data_source = EXCLUDED.data_source
             """
 
             cursor.executemany(insert_query, batch_data)

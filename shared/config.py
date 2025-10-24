@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # Screener settings
     screener_pct_threshold: float = 0.03  # 3% move threshold
     screener_dataset: str = "EQUS.MINI"  # Regular hours only (9:30 AM - 4:00 PM ET)
-    screener_schema: str = "mbp-1"
+    screener_schema: str = "trades"  # ✅ Switch to trades for real volume data
     enable_price_bars: bool = os.getenv("ENABLE_PRICE_BARS", "false").lower() == "true"  # Enable 1-minute bar capture
 
     # Redis (optional for now)
