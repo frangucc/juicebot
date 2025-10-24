@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useData } from '@/contexts/DataContext'
 
 interface SymbolState {
@@ -30,6 +31,7 @@ interface AlertsLeaderboardProps {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setBaselineFilter, gapDirection, setGapDirection, searchQuery }: AlertsLeaderboardProps) {
+  const router = useRouter()
   const { realtimePrices } = useData()
   const [leaderboardData, setLeaderboardData] = useState<{
     col_20_plus: SymbolState[]
@@ -352,17 +354,18 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
             return (
               <div
                 key={symbolState.symbol}
-                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-start gap-3 ${flashClass}`}
+                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-start gap-3 cursor-pointer ${flashClass}`}
+                onClick={() => router.push(`/chart-agent?symbol=${symbolState.symbol}`)}
               >
               {/* Column 1: Symbol, Price, Timestamp (stacked vertically) */}
-              <div className="flex flex-col w-20 flex-shrink-0">
+              <div className="flex flex-col w-20 flex-shrink-0 pointer-events-none">
                 <span className="font-bold text-green-300 text-sm mb-0.5">{symbolState.symbol}</span>
                 <span className="text-green-700 text-xs mb-0.5">${symbolState.current_price.toFixed(2)}</span>
                 <span className="text-green-700 text-[10px]">{formatTime(symbolState.last_updated)}</span>
               </div>
 
               {/* Column 2: Discord Icon (if applicable) */}
-              <div className="w-6 flex-shrink-0 flex items-center justify-center">
+              <div className="w-6 flex-shrink-0 flex items-center justify-center pointer-events-none">
                 {discordJuiceBoxes[symbolState.symbol] >= 3 && (
                   <img
                     src="/images/icon-discord.png"
@@ -374,7 +377,7 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
               </div>
 
               {/* Columns 3-9: 7 Percentage Columns (added PRE, POST, and 1M) */}
-              <div className="grid grid-cols-7 gap-2 flex-1 text-center items-center">
+              <div className="grid grid-cols-7 gap-2 flex-1 text-center items-center pointer-events-none">
                 <span className={`font-bold text-xs ${symbolState.pct_from_yesterday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {formatShortPct(symbolState.pct_from_yesterday)}
                 </span>
@@ -409,16 +412,17 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
             return (
               <div
                 key={symbolState.symbol}
-                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-center ${flashClass}`}
+                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-center cursor-pointer ${flashClass}`}
+                onClick={() => router.push(`/chart-agent?symbol=${symbolState.symbol}`)}
               >
                 {/* Column 1: Ticker + Price (2 rows stacked) */}
-                <div className="flex flex-col w-16 flex-shrink-0">
+                <div className="flex flex-col w-16 flex-shrink-0 pointer-events-none">
                   <span className="font-bold text-green-300 text-sm mb-0.5">{symbolState.symbol}</span>
                   <span className="text-green-700 text-xs">${symbolState.current_price.toFixed(2)}</span>
                 </div>
 
                 {/* Column 2: Discord Icon */}
-                <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                <div className="w-6 flex-shrink-0 flex items-center justify-center pointer-events-none">
                   {discordJuiceBoxes[symbolState.symbol] >= 3 && (
                     <img
                       src="/images/icon-discord.png"
@@ -430,7 +434,7 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
                 </div>
 
                 {/* Column 3: Percentage + Time (2 rows stacked, right-aligned) */}
-                <div className="flex flex-col flex-1 items-end">
+                <div className="flex flex-col flex-1 items-end pointer-events-none">
                   <span className={`font-bold text-sm mb-0.5 ${pctValue !== null ? colorClass : 'text-gray-600'}`}>
                     {pctValue !== null ? `${pctValue > 0 ? '+' : ''}${pctValue.toFixed(2)}%` : '--'}
                   </span>

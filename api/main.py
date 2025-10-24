@@ -233,6 +233,43 @@ async def get_recent_prices(limit: int = 20):
         raise HTTPException(status_code=500, detail=f"Failed to fetch recent prices: {str(e)}")
 
 
+@app.get("/bars/{symbol}")
+async def get_bars(symbol: str, limit: int = 500):
+    """
+    Get 1-minute OHLCV bars for a specific symbol.
+
+    Args:
+        symbol: Stock symbol (e.g., 'AAPL')
+        limit: Number of bars to return (default: 500, max: 1000)
+
+    Returns:
+        List of 1-minute OHLCV bars with timestamp, open, high, low, close, volume
+    """
+    try:
+        # Cap limit at 1000
+        limit = min(limit, 1000)
+
+        # Query price_bars table
+        response = supabase.table("price_bars") \
+            .select("*") \
+            .eq("symbol", symbol.upper()) \
+            .order("timestamp", desc=True) \
+            .limit(limit) \
+            .execute()
+
+        if not response.data:
+            raise HTTPException(status_code=404, detail=f"No bar data found for symbol {symbol}")
+
+        # Reverse to get chronological order (oldest first)
+        bars = list(reversed(response.data))
+
+        return bars
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch bar data: {str(e)}")
+
+
 @app.get("/symbols/state")
 async def get_symbol_state(
     threshold: float = 1.0,

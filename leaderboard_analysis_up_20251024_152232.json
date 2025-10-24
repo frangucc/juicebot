@@ -1,0 +1,236 @@
+[
+  {
+    "symbol": "ADVWW",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/ADVWW?symbol=ADVWW&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 0.01005,
+    "pct_from_yesterday": 458.33333333333337
+  },
+  {
+    "symbol": "WGRX",
+    "error": "'ts_event'",
+    "current_price": 1.205,
+    "pct_from_yesterday": 199.08165797964756
+  },
+  {
+    "symbol": "INBX",
+    "error": "'ts_event'",
+    "current_price": 56.1,
+    "pct_from_yesterday": 97.81382228490834
+  },
+  {
+    "symbol": "GNTA",
+    "error": "'ts_event'",
+    "current_price": 5.945,
+    "pct_from_yesterday": 84.05572755417957
+  },
+  {
+    "symbol": "MAMK",
+    "error": "'ts_event'",
+    "current_price": 5.415000000000001,
+    "pct_from_yesterday": 81.1036789297659
+  },
+  {
+    "symbol": "SLE",
+    "error": "'ts_event'",
+    "current_price": 3.4300000000000006,
+    "pct_from_yesterday": 64.90384615384617
+  },
+  {
+    "symbol": "TOVX",
+    "error": "'ts_event'",
+    "current_price": 0.5401,
+    "pct_from_yesterday": 57.92397660818713
+  },
+  {
+    "symbol": "NEUP",
+    "error": "'ts_event'",
+    "current_price": 5.945,
+    "pct_from_yesterday": 46.79012345679014
+  },
+  {
+    "symbol": "NUAI",
+    "error": "'ts_event'",
+    "current_price": 5.785,
+    "pct_from_yesterday": 46.45569620253164
+  },
+  {
+    "symbol": "DVLT",
+    "error": "'ts_event'",
+    "current_price": 3.26,
+    "pct_from_yesterday": 44.88888888888888
+  },
+  {
+    "symbol": "NEGG",
+    "error": "'ts_event'",
+    "current_price": 66.89500000000001,
+    "pct_from_yesterday": 41.218070508760846
+  },
+  {
+    "symbol": "MOFG",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/MOFG?symbol=MOFG&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 39.05,
+    "pct_from_yesterday": 37.64540007049699
+  },
+  {
+    "symbol": "MSN",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/MSN?symbol=MSN&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 0.65825,
+    "pct_from_yesterday": 35.35883199670985
+  },
+  {
+    "symbol": "LAZR",
+    "error": "'ts_event'",
+    "current_price": 2.185,
+    "pct_from_yesterday": 29.289940828402372
+  },
+  {
+    "symbol": "CRMLW",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/CRMLW?symbol=CRMLW&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 7.550000000000001,
+    "pct_from_yesterday": 28.839590443686014
+  },
+  {
+    "symbol": "CIIT",
+    "error": "'ts_event'",
+    "current_price": 0.9136500000000001,
+    "pct_from_yesterday": 28.502109704641367
+  },
+  {
+    "symbol": "OPEX",
+    "error": "'ts_event'",
+    "current_price": 33.96,
+    "pct_from_yesterday": 27.907677473785707
+  },
+  {
+    "symbol": "QSU",
+    "error": "'ts_event'",
+    "current_price": 20.435000000000002,
+    "pct_from_yesterday": 27.63897564022486
+  },
+  {
+    "symbol": "QSX",
+    "error": "'ts_event'",
+    "current_price": 36.910000000000004,
+    "pct_from_yesterday": 27.33206380747365
+  },
+  {
+    "symbol": "USBC",
+    "error": "'ts_event'",
+    "current_price": 1.06,
+    "pct_from_yesterday": 27.220355256841096
+  },
+  {
+    "symbol": "ASST",
+    "error": "'ts_event'",
+    "current_price": 1.0950000000000002,
+    "pct_from_yesterday": 26.706780837769063
+  },
+  {
+    "symbol": "NTRP",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/NTRP?symbol=NTRP&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 4.2,
+    "pct_from_yesterday": 26.12612612612613
+  },
+  {
+    "symbol": "CYH",
+    "error": "'ts_event'",
+    "current_price": 4.095000000000001,
+    "pct_from_yesterday": 25.613496932515368
+  },
+  {
+    "symbol": "FRDU",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/FRDU?symbol=FRDU&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 37.125,
+    "pct_from_yesterday": 25.475709254615147
+  },
+  {
+    "symbol": "XFOR",
+    "error": "'ts_event'",
+    "current_price": 3.8600000000000003,
+    "pct_from_yesterday": 24.9190938511327
+  },
+  {
+    "symbol": "VIOT",
+    "error": "'ts_event'",
+    "current_price": 3.49,
+    "pct_from_yesterday": 24.642857142857157
+  },
+  {
+    "symbol": "BURU",
+    "error": "'ts_event'",
+    "current_price": 0.4193,
+    "pct_from_yesterday": 22.925828202873056
+  },
+  {
+    "symbol": "SGMT",
+    "error": "'ts_event'",
+    "current_price": 8.995000000000001,
+    "pct_from_yesterday": 22.714870395634392
+  },
+  {
+    "symbol": "CLSKW",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/CLSKW?symbol=CLSKW&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 0.77315,
+    "pct_from_yesterday": 22.527733755942947
+  },
+  {
+    "symbol": "MIGI",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/MIGI?symbol=MIGI&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 1.5150000000000001,
+    "pct_from_yesterday": 22.17741935483872
+  },
+  {
+    "symbol": "CLIK",
+    "error": "'ts_event'",
+    "current_price": 7.355,
+    "pct_from_yesterday": 22.176079734219282
+  },
+  {
+    "symbol": "CRCA",
+    "error": "'ts_event'",
+    "current_price": 15.940000000000001,
+    "pct_from_yesterday": 21.21673003802282
+  },
+  {
+    "symbol": "CRCG",
+    "error": "'ts_event'",
+    "current_price": 10.14,
+    "pct_from_yesterday": 21.002386634844864
+  },
+  {
+    "symbol": "OKLL",
+    "error": "'ts_event'",
+    "current_price": 80.465,
+    "pct_from_yesterday": 20.51070840197695
+  },
+  {
+    "symbol": "GRND",
+    "error": "'ts_event'",
+    "current_price": 15.265,
+    "pct_from_yesterday": 20.481452249408054
+  },
+  {
+    "symbol": "REFR",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/REFR?symbol=REFR&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 1.975,
+    "pct_from_yesterday": 20.426829268292696
+  },
+  {
+    "symbol": "FIX",
+    "error": "'ts_event'",
+    "current_price": 993.0000000000001,
+    "pct_from_yesterday": 20.363636363636378
+  },
+  {
+    "symbol": "CELZ",
+    "error": "Client error '404 Not Found' for url 'http://localhost:8000/bars/CELZ?symbol=CELZ&start=2025-10-24'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "current_price": 4.965,
+    "pct_from_yesterday": 20.217917675544793
+  },
+  {
+    "symbol": "CCUP",
+    "error": "'ts_event'",
+    "current_price": 16.925,
+    "pct_from_yesterday": 20.205965909090914
+  }
+]
