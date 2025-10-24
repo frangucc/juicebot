@@ -17,9 +17,13 @@ def run_migration():
 
     print("Running database migration...")
     print("=" * 60)
+    print("\nThis migration adds session-specific baseline columns:")
+    print("  - pre_market_open, rth_open, post_market_open")
+    print("  - pct_from_pre, pct_from_post")
+    print()
 
     # Read the SQL file
-    with open("sql/001_init_schema.sql", "r") as f:
+    with open("migrations/add_session_columns.sql", "r") as f:
         sql = f.read()
 
     # Try direct connection first
@@ -41,25 +45,25 @@ def run_migration():
 
             print("✅ Migration completed successfully!")
 
-            # Verify tables were created
+            # Verify columns were added
             cursor.execute("""
-                SELECT table_name
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                AND table_type = 'BASE TABLE'
-                ORDER BY table_name;
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = 'symbol_state'
+                AND column_name IN ('pre_market_open', 'rth_open', 'post_market_open', 'pct_from_pre', 'pct_from_post')
+                ORDER BY column_name;
             """)
 
-            tables = cursor.fetchall()
-            print("\n📊 Database tables:")
-            for table in tables:
-                print(f"  ✅ {table[0]}")
+            columns = cursor.fetchall()
+            print("\n📊 New columns in symbol_state table:")
+            for col in columns:
+                print(f"  ✅ {col[0]} ({col[1]})")
 
             cursor.close()
             conn.close()
 
             print("\n" + "=" * 60)
-            print("🎉 Database is ready!")
+            print("🎉 Migration complete! Scanner will now track pre % and post % changes.")
             return
 
         except psycopg2.OperationalError as e:

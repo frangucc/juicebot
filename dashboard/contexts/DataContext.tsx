@@ -25,6 +25,7 @@ interface DataContextType {
   loadingStatus: string
   isLoading: boolean
   priceUpdates: any[]
+  realtimePrices: Map<string, any>
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -36,6 +37,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loadingStatus, setLoadingStatus] = useState<string>('Connecting to server...')
   const [isLoading, setIsLoading] = useState(true)
   const [priceUpdates, setPriceUpdates] = useState<any[]>([])
+  const [realtimePrices, setRealtimePrices] = useState<Map<string, any>>(new Map())
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 3
 
@@ -110,17 +112,68 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Initial parallel fetch
     Promise.all([fetchStats(), fetchLeaderboardCounts(), fetchAlerts(), fetchPrices()])
 
-    // Refresh intervals
+    // Refresh intervals (keep for fallback)
     const alertInterval = setInterval(fetchAlerts, 2000)
     const leaderboardInterval = setInterval(fetchLeaderboardCounts, 2000)
     const statsInterval = setInterval(fetchStats, 30000)
     const pricesInterval = setInterval(fetchPrices, 2000)
+
+    // WebSocket connection for real-time price updates
+    let ws: WebSocket | null = null
+    const connectWebSocket = () => {
+      try {
+        const wsUrl = API_URL.replace('http', 'ws')
+        ws = new WebSocket(`${wsUrl}/ws/prices`)
+
+        ws.onopen = () => {
+          console.log('WebSocket connected for real-time prices')
+        }
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            if (data.type === 'price_update' && data.data) {
+              // Update the realtime prices map
+              setRealtimePrices(prev => {
+                const newMap = new Map(prev)
+                newMap.set(data.data.symbol, {
+                  price: data.data.price,
+                  bid: data.data.bid,
+                  ask: data.data.ask,
+                  pct_from_yesterday: data.data.pct_from_yesterday,
+                  timestamp: data.data.timestamp
+                })
+                return newMap
+              })
+            }
+          } catch (err) {
+            console.error('Error parsing WebSocket message:', err)
+          }
+        }
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error)
+        }
+
+        ws.onclose = () => {
+          console.log('WebSocket closed, will reconnect in 5s')
+          setTimeout(connectWebSocket, 5000)
+        }
+      } catch (err) {
+        console.error('Failed to connect WebSocket:', err)
+      }
+    }
+
+    connectWebSocket()
 
     return () => {
       clearInterval(alertInterval)
       clearInterval(leaderboardInterval)
       clearInterval(statsInterval)
       clearInterval(pricesInterval)
+      if (ws) {
+        ws.close()
+      }
     }
   }, [retryCount])
 
@@ -132,7 +185,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         leaderboardCounts,
         loadingStatus,
         isLoading,
-        priceUpdates
+        priceUpdates,
+        realtimePrices
       }}
     >
       {children}

@@ -8,7 +8,7 @@ Provides REST API and WebSocket endpoints for:
 - Real-time updates via WebSocket
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -16,6 +16,9 @@ from pydantic import BaseModel
 import pytz
 from functools import lru_cache
 import time
+import json
+import redis
+import asyncio
 
 from shared.database import supabase
 from shared.config import settings
@@ -280,7 +283,8 @@ async def get_symbol_state(
 async def get_leaderboard(
     threshold: float = 1.0,
     price_filter: Optional[str] = None,
-    baseline: str = "yesterday"
+    baseline: str = "yesterday",
+    direction: str = "up"
 ):
     """
     Get leaderboard of symbols categorized by % move ranges - FAST version with caching.
@@ -289,13 +293,14 @@ async def get_leaderboard(
         threshold: Minimum % move to include (default: 1.0%)
         price_filter: Filter by stock price range: 'small' (<$20), 'mid' ($20-$100), 'large' (>$100)
         baseline: Which baseline to use: 'yesterday', 'open', '15min', '5min'
+        direction: 'up' for gap ups (positive %), 'down' for gap downs (negative %)
 
     Returns:
         Categorized symbols by move ranges: 20%+, 10-20%, 1-10%
     """
     try:
         # Check cache first
-        cache_key = f"{baseline}:{price_filter}:{threshold}"
+        cache_key = f"{baseline}:{price_filter}:{threshold}:{direction}"
         now = time.time()
 
         if cache_key in _leaderboard_cache:
@@ -308,6 +313,10 @@ async def get_leaderboard(
         # Build query with database-level filtering
         query = supabase.table("symbol_state").select("*")
 
+        # CRITICAL: Only show symbols updated in the last 4 hours (to exclude stale data from previous days)
+        cutoff_time = datetime.now(pytz.UTC) - timedelta(hours=4)
+        query = query.gte("last_updated", cutoff_time.isoformat())
+
         # Apply price filter at database level
         if price_filter == "small":
             query = query.lt("current_price", 20)
@@ -316,8 +325,17 @@ async def get_leaderboard(
         elif price_filter == "large":
             query = query.gte("current_price", 100)
 
-        # Filter by threshold at database level using OR condition
-        query = query.or_(f"{pct_field}.gte.{threshold},{pct_field}.lte.{-threshold}")
+        # Filter by direction (gap ups vs gap downs)
+        if direction == "down":
+            # Gap downs: negative % moves only
+            query = query.lte(pct_field, -threshold)
+            # CRITICAL: Order by most negative first to get biggest losers before limit
+            query = query.order(pct_field, desc=False)
+        else:
+            # Gap ups (default): positive % moves only
+            query = query.gte(pct_field, threshold)
+            # CRITICAL: Order by most positive first to get biggest gainers before limit
+            query = query.order(pct_field, desc=True)
 
         # Limit to top movers only - we don't need ALL symbols
         query = query.limit(2000)
@@ -343,16 +361,23 @@ async def get_leaderboard(
             elif abs_pct >= threshold:
                 col_1_to_10.append(symbol)
 
-        # Sort each category by actual % (highest gains first, then negatives)
-        # This ensures +22% comes before -23%
-        col_20_plus.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
-        col_10_to_20.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
-        col_1_to_10.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
+        # Sort each category based on direction
+        if direction == "down":
+            # Gap downs: sort by most negative first (-62% → -50% → -25%)
+            col_20_plus.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=False)
+            col_10_to_20.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=False)
+            col_1_to_10.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=False)
+        else:
+            # Gap ups: sort by most positive first (+62% → +50% → +25%)
+            col_20_plus.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
+            col_10_to_20.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
+            col_1_to_10.sort(key=lambda x: x.get(pct_field, 0) or 0, reverse=True)
 
         result = {
             "baseline": baseline,
             "threshold": threshold,
             "price_filter": price_filter,
+            "direction": direction,
             "col_20_plus": col_20_plus,
             "col_10_to_20": col_10_to_20,
             "col_1_to_10": col_1_to_10,
@@ -366,6 +391,196 @@ async def get_leaderboard(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch leaderboard: {str(e)}")
+
+
+@app.get("/symbols/{symbol}/latest-price")
+async def get_latest_price(symbol: str):
+    """
+    Get the most recent price for a symbol from price_bars.
+
+    Returns:
+        Latest OHLCV bar data with the close price
+    """
+    try:
+        # Get most recent bar from price_bars
+        response = (
+            supabase.table("price_bars")
+            .select("*")
+            .eq("symbol", symbol.upper())
+            .order("timestamp", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        if response.data:
+            bar = response.data[0]
+            return {
+                "symbol": symbol.upper(),
+                "price": bar["close"],
+                "timestamp": bar["timestamp"],
+                "open": bar["open"],
+                "high": bar["high"],
+                "low": bar["low"],
+                "close": bar["close"],
+                "volume": bar["volume"],
+                "trade_count": bar["trade_count"]
+            }
+        else:
+            # Fallback to symbol_state if no bars yet
+            response = (
+                supabase.table("symbol_state")
+                .select("current_price,last_updated")
+                .eq("symbol", symbol.upper())
+                .limit(1)
+                .execute()
+            )
+            if response.data:
+                return {
+                    "symbol": symbol.upper(),
+                    "price": response.data[0]["current_price"],
+                    "timestamp": response.data[0]["last_updated"],
+                    "source": "symbol_state"
+                }
+            else:
+                raise HTTPException(status_code=404, detail=f"No price data found for {symbol}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch latest price: {str(e)}")
+
+
+@app.get("/discord/juice-boxes")
+async def get_discord_juice_boxes():
+    """
+    Get Discord juice box counts (3+) for all tickers.
+
+    Returns:
+        Dictionary mapping symbols to juice box counts (only symbols with 3+ juice boxes)
+    """
+    try:
+        import psycopg2
+        from shared.config import settings
+
+        if not settings.database2_url:
+            return {}
+
+        conn = psycopg2.connect(settings.database2_url)
+        cursor = conn.cursor()
+
+        query = '''
+        WITH ticker_stats AS (
+          SELECT
+            t.symbol,
+            COUNT(DISTINCT td.message_id) as mention_count,
+            COUNT(DISTINCT td.message_id) FILTER (WHERE m.discord_timestamp >= NOW() - INTERVAL '5 minutes') as mentions_5min,
+            COUNT(DISTINCT td.message_id) FILTER (WHERE m.discord_timestamp >= NOW() - INTERVAL '15 minutes') as mentions_15min
+          FROM tickers t
+          JOIN ticker_detections td ON t.symbol = td.ticker_symbol
+          JOIN messages m ON td.message_id = m.id
+          WHERE m.discord_timestamp >= CURRENT_DATE
+          GROUP BY t.symbol
+        )
+        SELECT
+          symbol,
+          LEAST(
+            CASE
+              WHEN mention_count >= 20 THEN 4
+              WHEN mention_count >= 10 THEN 3
+              WHEN mention_count >= 5 THEN 2
+              WHEN mention_count >= 2 THEN 1
+              ELSE 0
+            END +
+            CASE
+              WHEN mentions_5min >= 3 THEN 1
+              WHEN mentions_15min >= 5 THEN 1
+              ELSE 0
+            END,
+            4
+          ) as total_juice_boxes
+        FROM ticker_stats
+        WHERE LEAST(
+            CASE
+              WHEN mention_count >= 20 THEN 4
+              WHEN mention_count >= 10 THEN 3
+              WHEN mention_count >= 5 THEN 2
+              WHEN mention_count >= 2 THEN 1
+              ELSE 0
+            END +
+            CASE
+              WHEN mentions_5min >= 3 THEN 1
+              WHEN mentions_15min >= 5 THEN 1
+              ELSE 0
+            END,
+            4
+          ) >= 3;
+        '''
+
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # Convert to dictionary
+        juice_boxes = {row[0]: row[1] for row in results}
+
+        cursor.close()
+        conn.close()
+
+        return juice_boxes
+
+    except Exception as e:
+        # Return empty dict on error (graceful degradation)
+        print(f"Discord juice box query failed: {str(e)}")
+        return {}
+
+
+@app.websocket("/ws/prices")
+async def websocket_prices(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time price updates.
+
+    Subscribes to Redis pub/sub and streams price updates to connected clients.
+    """
+    await websocket.accept()
+
+    # Create Redis subscriber
+    redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('price_updates')
+
+    try:
+        # Send initial connection success message
+        await websocket.send_json({"type": "connected", "message": "Real-time price feed connected"})
+
+        # Listen for messages from Redis and forward to WebSocket
+        async def redis_listener():
+            """Listen to Redis pub/sub in the background."""
+            for message in pubsub.listen():
+                if message['type'] == 'message':
+                    try:
+                        # Parse and forward the price update
+                        price_data = json.loads(message['data'])
+                        await websocket.send_json({
+                            "type": "price_update",
+                            "data": price_data
+                        })
+                    except Exception as e:
+                        # Skip malformed messages
+                        pass
+
+                # Allow other async tasks to run
+                await asyncio.sleep(0)
+
+        # Run the Redis listener
+        await redis_listener()
+
+    except WebSocketDisconnect:
+        print("WebSocket client disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
+        pubsub.unsubscribe()
+        pubsub.close()
+        redis_client.close()
 
 
 # Run with: uvicorn api.main:app --reload

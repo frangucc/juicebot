@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useData } from '@/contexts/DataContext'
 
 interface SymbolState {
   symbol: string
@@ -29,6 +30,7 @@ interface AlertsLeaderboardProps {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setBaselineFilter, gapDirection, setGapDirection, searchQuery }: AlertsLeaderboardProps) {
+  const { realtimePrices } = useData()
   const [leaderboardData, setLeaderboardData] = useState<{
     col_20_plus: SymbolState[]
     col_10_to_20: SymbolState[]
@@ -48,6 +50,36 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
     col_10_to_20: [],
     col_1_to_10: []
   })
+  const [discordJuiceBoxes, setDiscordJuiceBoxes] = useState<Record<string, number>>({})
+
+  // Update leaderboard data with real-time WebSocket prices
+  useEffect(() => {
+    if (realtimePrices.size === 0) return
+
+    setLeaderboardData(prevData => {
+      const updateColumn = (column: SymbolState[]) => {
+        return column.map(symbolState => {
+          const rtPrice = realtimePrices.get(symbolState.symbol)
+          if (rtPrice && rtPrice.pct_from_yesterday !== null) {
+            // Update with real-time data
+            return {
+              ...symbolState,
+              current_price: rtPrice.price,
+              pct_from_yesterday: rtPrice.pct_from_yesterday,
+              last_updated: rtPrice.timestamp
+            }
+          }
+          return symbolState
+        })
+      }
+
+      return {
+        col_20_plus: updateColumn(prevData.col_20_plus),
+        col_10_to_20: updateColumn(prevData.col_10_to_20),
+        col_1_to_10: updateColumn(prevData.col_1_to_10)
+      }
+    })
+  }, [realtimePrices])
 
   // Helper function to detect if a row has been updated and determine direction
   const detectUpdates = (newData: SymbolState[], oldData: SymbolState[], column: string) => {
@@ -81,6 +113,25 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
 
     return updatedSymbols
   }
+
+  // Fetch Discord juice box data
+  useEffect(() => {
+    const fetchDiscordJuice = async () => {
+      try {
+        const response = await fetch(`${API_URL}/discord/juice-boxes`)
+        if (response.ok) {
+          const data = await response.json()
+          setDiscordJuiceBoxes(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch Discord juice boxes:', error)
+      }
+    }
+
+    fetchDiscordJuice()
+    const interval = setInterval(fetchDiscordJuice, 30000) // Refresh every 30 seconds
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -272,7 +323,10 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
             {/* Empty space for column 1 (ticker/price/time) */}
             <div className="w-20 flex-shrink-0"></div>
 
-            {/* Headers for columns 2-8 (added PRE, POST, and 1M) */}
+            {/* Empty space for column 2 (icon) */}
+            <div className="w-6 flex-shrink-0"></div>
+
+            {/* Headers for columns 3-9 (added PRE, POST, and 1M) */}
             <div className="grid grid-cols-7 gap-2 flex-1 text-[10px] text-teal-dark uppercase text-center">
               <div>Yest</div>
               <div>PRE</div>
@@ -307,7 +361,19 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
                 <span className="text-green-700 text-[10px]">{formatTime(symbolState.last_updated)}</span>
               </div>
 
-              {/* Columns 2-8: 7 Percentage Columns (added PRE, POST, and 1M) */}
+              {/* Column 2: Discord Icon (if applicable) */}
+              <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                {discordJuiceBoxes[symbolState.symbol] >= 3 && (
+                  <img
+                    src="/images/icon-discord.png"
+                    alt="Discord"
+                    className="w-4 h-4 opacity-80"
+                    title={`${discordJuiceBoxes[symbolState.symbol]} juice boxes on Discord`}
+                  />
+                )}
+              </div>
+
+              {/* Columns 3-9: 7 Percentage Columns (added PRE, POST, and 1M) */}
               <div className="grid grid-cols-7 gap-2 flex-1 text-center items-center">
                 <span className={`font-bold text-xs ${symbolState.pct_from_yesterday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {formatShortPct(symbolState.pct_from_yesterday)}
@@ -343,17 +409,32 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
             return (
               <div
                 key={symbolState.symbol}
-                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs ${flashClass}`}
+                className={`border-b border-green-900 hover:bg-green-950/30 transition-colors p-2 text-xs flex items-center ${flashClass}`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-green-300">{symbolState.symbol}</span>
-                  <span className={`font-bold ${pctValue !== null ? colorClass : 'text-gray-600'}`}>
+                {/* Column 1: Ticker + Price (2 rows stacked) */}
+                <div className="flex flex-col w-16 flex-shrink-0">
+                  <span className="font-bold text-green-300 text-sm mb-0.5">{symbolState.symbol}</span>
+                  <span className="text-green-700 text-xs">${symbolState.current_price.toFixed(2)}</span>
+                </div>
+
+                {/* Column 2: Discord Icon */}
+                <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                  {discordJuiceBoxes[symbolState.symbol] >= 3 && (
+                    <img
+                      src="/images/icon-discord.png"
+                      alt="Discord"
+                      className="w-6 h-6 opacity-80"
+                      title={`${discordJuiceBoxes[symbolState.symbol]} juice boxes on Discord`}
+                    />
+                  )}
+                </div>
+
+                {/* Column 3: Percentage + Time (2 rows stacked, right-aligned) */}
+                <div className="flex flex-col flex-1 items-end">
+                  <span className={`font-bold text-sm mb-0.5 ${pctValue !== null ? colorClass : 'text-gray-600'}`}>
                     {pctValue !== null ? `${pctValue > 0 ? '+' : ''}${pctValue.toFixed(2)}%` : '--'}
                   </span>
-                </div>
-                <div className="flex items-center justify-between text-green-700">
-                  <span>${symbolState.current_price.toFixed(2)}</span>
-                  <span>{formatTime(symbolState.last_updated)}</span>
+                  <span className="text-green-700 text-xs">{formatTime(symbolState.last_updated)}</span>
                 </div>
               </div>
             )

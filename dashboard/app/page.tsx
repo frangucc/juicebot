@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { AlertsList } from '@/components/AlertsList'
@@ -10,10 +10,40 @@ import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { useData } from '@/contexts/DataContext'
 
 export default function Home() {
-  const { stats, alerts, leaderboardCounts, loadingStatus, isLoading } = useData()
   const [threshold, setThreshold] = useState<number>(1.0) // Default 1%
   const [priceFilter, setPriceFilter] = useState<'all' | 'small' | 'mid' | 'large'>('all')
+  const [baselineFilter, setBaselineFilter] = useState<'show_all' | 'yesterday' | 'pre' | 'open' | 'post' | '15min' | '5min'>('yesterday')
+  const [gapDirection, setGapDirection] = useState<'up' | 'down'>('up')
+  const [leaderboardCounts, setLeaderboardCounts] = useState({ movers_20plus: 0, movers_10to20: 0, movers_1to10: 0 })
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState<string>('')
+
+  const { stats, alerts, loadingStatus, isLoading } = useData()
+
+  // Fetch leaderboard counts with current filters
+  useEffect(() => {
+    const fetchLeaderboardCounts = async () => {
+      try {
+        const baselineParam = baselineFilter === 'show_all' ? 'yesterday' : baselineFilter
+        const response = await fetch(
+          `http://localhost:8000/symbols/leaderboard?threshold=1.0&baseline=${baselineParam}&direction=${gapDirection}`
+        )
+        if (!response.ok) throw new Error('Failed to fetch leaderboard')
+        const data = await response.json()
+        setLeaderboardCounts({
+          movers_20plus: data.col_20_plus?.length || 0,
+          movers_10to20: data.col_10_to_20?.length || 0,
+          movers_1to10: data.col_1_to_10?.length || 0
+        })
+      } catch (err: any) {
+        console.error('Failed to fetch leaderboard counts:', err)
+      }
+    }
+
+    fetchLeaderboardCounts()
+    const interval = setInterval(fetchLeaderboardCounts, 2000)
+    return () => clearInterval(interval)
+  }, [baselineFilter, gapDirection])
 
   return (
     <div className="min-h-screen bg-black font-mono text-green-400">
@@ -117,7 +147,7 @@ export default function Home() {
                   Filter alerts by threshold and stock price
                 </p>
                 {/* Price Filter Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <button
                     onClick={() => setPriceFilter('all')}
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${
@@ -158,6 +188,13 @@ export default function Home() {
                   >
                     Large ($100+)
                   </button>
+                  <input
+                    type="text"
+                    placeholder="Search symbol..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="ml-2 px-3 py-1.5 bg-gray-800 text-green-300 text-xs border border-green-800 rounded hover:bg-gray-700 transition-colors placeholder-green-700/50"
+                  />
                 </div>
               </div>
               {/* Threshold Slider */}
@@ -187,13 +224,18 @@ export default function Home() {
             Error: {error}
           </div>
         )}
-        {stats && <StatsCards stats={stats} leaderboardCounts={leaderboardCounts} />}
+        {stats && <StatsCards stats={stats} leaderboardCounts={leaderboardCounts} baselineFilter={baselineFilter} gapDirection={gapDirection} />}
         {isLoading && !stats && <p className="text-green-600">{loadingStatus}</p>}
 
         {/* Leaderboard */}
         <AlertsLeaderboard
           threshold={threshold}
           priceFilter={priceFilter}
+          baselineFilter={baselineFilter}
+          setBaselineFilter={setBaselineFilter}
+          gapDirection={gapDirection}
+          setGapDirection={setGapDirection}
+          searchQuery={searchQuery}
         />
 
           {/* Alerts List */}

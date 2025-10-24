@@ -11,8 +11,11 @@ import pytz
 from shared.config import settings
 from shared.price_cache import price_cache
 from shared.database import supabase
+from shared.price_broadcaster import PriceBroadcaster
+from screener.bar_aggregator import BarAggregator
 import random
 import time
+import os
 
 
 class PriceMovementScanner:
@@ -69,6 +72,15 @@ class PriceMovementScanner:
         self._last_ohlcv_fetch = time.time()
         self._ohlcv_fetch_interval = 300  # Fetch OHLCV every 5 minutes
         self._symbol_last_seen: Dict[str, float] = {}  # Track when we last saw each symbol
+
+        # Price broadcaster for WebSocket real-time updates
+        self.price_broadcaster = PriceBroadcaster()
+
+        # Bar aggregator for 1-minute OHLCV bars (optional)
+        enable_bars = os.getenv('ENABLE_PRICE_BARS', 'false').lower() == 'true'
+        self.bar_aggregator = BarAggregator(enable_db_writes=enable_bars) if enable_bars else None
+        if self.bar_aggregator:
+            print(f"[Scanner] Bar aggregator ENABLED (db_writes={enable_bars})")
 
         # Initialize with yesterday's closing prices
         self._load_previous_close_prices()
@@ -248,12 +260,33 @@ class PriceMovementScanner:
         except Exception:
             ts = pd.Timestamp.now('US/Eastern')
 
+        # Calculate percentage from yesterday (needed for both bar aggregator and broadcaster)
+        pct_from_yesterday = ((mid - last_close) / last_close) * 100 if last_close else 0
+
+        # Add tick to bar aggregator for 1-minute OHLCV bars (BEFORE filters to capture ALL symbols)
+        if self.bar_aggregator:
+            self.bar_aggregator.add_tick(
+                symbol=symbol,
+                price=mid,
+                timestamp=ts,
+                volume=0  # Volume not available from MBP-1
+            )
+
+        # Broadcast price update to WebSocket clients (real-time UI updates)
+        self.price_broadcaster.broadcast_price(
+            symbol=symbol,
+            price=mid,
+            bid=bid_price,
+            ask=ask_price,
+            pct_from_yesterday=pct_from_yesterday,
+            timestamp=ts.isoformat()
+        )
+
         # Periodically fetch OHLCV fallback for stale symbols
         self._fetch_stale_symbol_prices()
 
         # Update symbol state tracking with TIME-BASED priority sampling
         # Calculate priority tier based on % move from yesterday
-        pct_from_yesterday = ((mid - last_close) / last_close) * 100 if last_close else 0
         priority = self._calculate_priority_tier(pct_from_yesterday, self.pct_threshold)
 
         # TIME-BASED update intervals (seconds) instead of message-count based
@@ -384,10 +417,6 @@ class PriceMovementScanner:
             "price_timestamp": timestamp.isoformat(),
             "yesterday_close": yesterday_close,
             "today_open": today_open,
-            "price_15min_ago": price_15min_ago,
-            "price_5min_ago": price_5min_ago,
-            "snapshot_15min_ts": pd.Timestamp(self.snapshot_15min[symbol][1], unit='s', tz='UTC').tz_convert('US/Eastern').isoformat() if symbol in self.snapshot_15min else None,
-            "snapshot_5min_ts": pd.Timestamp(self.snapshot_5min[symbol][1], unit='s', tz='UTC').tz_convert('US/Eastern').isoformat() if symbol in self.snapshot_5min else None,
             "pct_from_yesterday": pct_from_yesterday,
             "pct_from_open": pct_from_open,
             "pct_from_15min": pct_from_15min,

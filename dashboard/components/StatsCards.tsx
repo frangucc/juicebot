@@ -12,9 +12,21 @@ interface StatsCardsProps {
     movers_10to20: number
     movers_1to10: number
   }
+  baselineFilter?: string
+  gapDirection?: string
 }
 
-export function StatsCards({ stats, leaderboardCounts }: StatsCardsProps) {
+export function StatsCards({ stats, leaderboardCounts, baselineFilter = 'yesterday', gapDirection = 'up' }: StatsCardsProps) {
+  // Generate label suffix based on filters
+  const getLabel = () => {
+    const direction = gapDirection === 'down' ? 'DOWN' : 'UP'
+    let baseline = baselineFilter === 'show_all' ? 'YEST' : baselineFilter.toUpperCase()
+    // Shorten "YESTERDAY" to "YEST"
+    if (baseline === 'YESTERDAY') baseline = 'YEST'
+    return `${baseline} ${direction}`
+  }
+
+  const labelSuffix = getLabel()
   return (
     <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4 mb-6">
       {/* Total Alerts */}
@@ -47,7 +59,7 @@ export function StatsCards({ stats, leaderboardCounts }: StatsCardsProps) {
           <div className="glass-card rounded-lg p-2 md:p-4 transition-all hover:shadow-glow-sm border-red-900/30">
             <p className="text-2xl md:text-3xl font-bold text-red-400 mb-0.5">{leaderboardCounts.movers_20plus}</p>
             <h3 className="text-red-600 text-[10px] md:text-xs uppercase tracking-wider">
-              20%+ Movers
+              20%+ {labelSuffix}
             </h3>
           </div>
 
@@ -55,7 +67,7 @@ export function StatsCards({ stats, leaderboardCounts }: StatsCardsProps) {
           <div className="glass-card rounded-lg p-2 md:p-4 transition-all hover:shadow-glow-sm border-orange-900/30">
             <p className="text-2xl md:text-3xl font-bold text-orange-400 mb-0.5">{leaderboardCounts.movers_10to20}</p>
             <h3 className="text-orange-600 text-[10px] md:text-xs uppercase tracking-wider">
-              10-20% Movers
+              10-20% {labelSuffix}
             </h3>
           </div>
 
@@ -63,7 +75,7 @@ export function StatsCards({ stats, leaderboardCounts }: StatsCardsProps) {
           <div className="glass-card rounded-lg p-2 md:p-4 transition-all hover:shadow-glow-sm">
             <p className="text-2xl md:text-3xl font-bold text-teal mb-0.5">{leaderboardCounts.movers_1to10}</p>
             <h3 className="text-teal-dark text-[10px] md:text-xs uppercase tracking-wider">
-              1-10% Movers
+              1-10% {labelSuffix}
             </h3>
           </div>
         </>
