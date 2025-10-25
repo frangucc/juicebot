@@ -66,22 +66,39 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
           },
           grid: {
             vertLines: { visible: false },
-            horzLines: { color: '#55b68533' },
+            horzLines: { visible: false },
           },
           rightPriceScale: {
             borderColor: '#55b68533',
+            scaleMargins: {
+              top: 0.1,
+              bottom: 0.1,
+            },
+            minimumWidth: 60,
           },
           leftPriceScale: {
             borderColor: '#55b68533',
           },
           timeScale: {
+            visible: false,  // Hide time scale on price chart
             borderColor: '#55b68533',
             timeVisible: true,
             secondsVisible: false,
-            rightOffset: 24,  // Add buffer space on the right
-            barSpacing: 6,    // Spacing between bars
-            fixLeftEdge: false,
-            fixRightEdge: false,
+            barSpacing: 6,
+            minBarSpacing: 6,
+            maxBarSpacing: 6,
+            rightOffset: 80,
+          },
+          handleScroll: {
+            mouseWheel: false,
+            pressedMouseMove: true,
+            horzTouchDrag: true,
+            vertTouchDrag: false,
+          },
+          handleScale: {
+            axisPressedMouseMove: false,
+            mouseWheel: false,
+            pinch: false,
           },
           width: priceChartRef.current.clientWidth,
           height: priceChartRef.current.clientHeight,
@@ -107,19 +124,35 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
           },
           grid: {
             vertLines: { visible: false },
-            horzLines: { color: '#55b68533' },
+            horzLines: { visible: false },
           },
           rightPriceScale: {
             borderColor: '#55b68533',
+            scaleMargins: {
+              top: 0.1,
+              bottom: 0.1,
+            },
+            minimumWidth: 60,
           },
           timeScale: {
             borderColor: '#55b68533',
             timeVisible: true,
             secondsVisible: false,
-            rightOffset: 24,
             barSpacing: 6,
-            fixLeftEdge: false,
-            fixRightEdge: false,
+            minBarSpacing: 6,
+            maxBarSpacing: 6,
+            rightOffset: 80,
+          },
+          handleScroll: {
+            mouseWheel: false,
+            pressedMouseMove: true,
+            horzTouchDrag: true,
+            vertTouchDrag: false,
+          },
+          handleScale: {
+            axisPressedMouseMove: false,
+            mouseWheel: false,
+            pinch: false,
           },
           width: volumeChartRef.current.clientWidth,
           height: volumeChartRef.current.clientHeight,
@@ -137,16 +170,10 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
 
         volumeSeriesRef.current = volumeSeries
 
-        // Sync time scales
-        priceChart.timeScale().subscribeVisibleTimeRangeChange((timeRange: any) => {
-          if (timeRange) {
-            volumeChart.timeScale().setVisibleRange(timeRange)
-          }
-        })
-
-        volumeChart.timeScale().subscribeVisibleTimeRangeChange((timeRange: any) => {
-          if (timeRange) {
-            priceChart.timeScale().setVisibleRange(timeRange)
+        // Sync time scales for user panning only
+        priceChart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange: any) => {
+          if (logicalRange && volumeChart && volumeChart.timeScale()) {
+            volumeChart.timeScale().setVisibleLogicalRange(logicalRange)
           }
         })
 
@@ -437,14 +464,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                   })
                 }
 
-                // Scroll to show recent bars
-                if (priceChartInstanceRef.current && newData.length > 100) {
-                  const timeScale = priceChartInstanceRef.current.timeScale()
-                  timeScale.setVisibleLogicalRange({
-                    from: Math.max(0, newData.length - 100),
-                    to: newData.length + 10
-                  })
-                }
+                // Let TradingView handle scrolling naturally
               }
 
               if (volumeSeriesRef.current) {
