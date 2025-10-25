@@ -6,30 +6,30 @@
   --geek-bg-secondary: #0a0a0a;
   --geek-bg-tertiary: #111111;
 
-  --geek-green-primary: #00ff41;
-  --geek-green-secondary: #00cc33;
-  --geek-green-tertiary: #008822;
-  --geek-green-dim: #004411;
+  --geek-green-primary: #55b685;
+  --geek-green-secondary: #55b685;
+  --geek-green-tertiary: #55b685;
+  --geek-green-dim: #55b685;
 
   --geek-blue: #0099ff;
   --geek-cyan: #00ffff;
   --geek-yellow: #ffff00;
   --geek-red: #ff0000;
 
-  --geek-border: #00ff4133;
-  --geek-border-strong: #00ff4166;
+  --geek-border: #55b68533;
+  --geek-border-strong: #55b68566;
 
-  --geek-text-primary: #00ff41;
-  --geek-text-secondary: #00cc33;
-  --geek-text-dim: #008822;
-  --geek-text-dimmer: #004411;
+  --geek-text-primary: #55b685;
+  --geek-text-secondary: #55b685;
+  --geek-text-dim: #55b685;
+  --geek-text-dimmer: #55b685;
 }
 
 /* Global Geek Mode Styles */
 .geek-mode {
   background-color: var(--geek-bg-primary);
   color: var(--geek-text-primary);
-  font-family: 'Courier New', monospace;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
 }
 
 .geek-bg-card {
