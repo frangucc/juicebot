@@ -22,6 +22,13 @@ case "$1" in
     npm run dev
     ;;
 
+  ai-service)
+    echo "Starting AI service..."
+    source venv/bin/activate
+    cd ai-service
+    uvicorn main:app --reload --host 0.0.0.0 --port 8002
+    ;;
+
   test)
     echo "Running test screener with replay..."
     source venv/bin/activate
@@ -54,6 +61,7 @@ case "$1" in
     echo "  test       - Test screener with replay"
     echo "  screener   - Run screener (add args like --threshold 0.05)"
     echo "  api        - Run API server"
+    echo "  ai-service - Run AI service (JuiceBot)"
     echo "  dashboard  - Run dashboard"
     echo ""
     echo "Examples:"
@@ -61,6 +69,7 @@ case "$1" in
     echo "  ./run.sh test"
     echo "  ./run.sh screener --threshold 0.05"
     echo "  ./run.sh api"
+    echo "  ./run.sh ai-service"
     echo "  ./run.sh dashboard"
     ;;
 esac

@@ -3,7 +3,30 @@
 import { useEffect, useRef, useState } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const AI_SERVICE_URL = 'http://localhost:8002'
 const HISTORICAL_WS_URL = 'ws://localhost:8001'
+
+// Send bar data to AI service for fast-path responses
+async function updateAIServiceMarketData(symbol: string, bar: BarData) {
+  try {
+    await fetch(`${AI_SERVICE_URL}/market_data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol,
+        timestamp: bar.timestamp,
+        open: bar.open,
+        high: bar.high,
+        low: bar.low,
+        close: bar.close,
+        volume: bar.volume
+      })
+    })
+  } catch (error) {
+    // Silently fail - don't disrupt chart rendering
+    console.debug('Failed to update AI service:', error)
+  }
+}
 
 interface StockChartProps {
   symbol: string
@@ -247,6 +270,11 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
             return
           }
 
+          // Update AI service with latest bar
+          if (bars.length > 0) {
+            updateAIServiceMarketData(symbol, bars[bars.length - 1])
+          }
+
           const chartData = bars.map(bar => ({
             time: Math.floor(new Date(bar.timestamp).getTime() / 1000) as any,
             open: bar.open,
@@ -302,6 +330,9 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
           const msg = JSON.parse(event.data)
 
           if (msg.type === 'bar') {
+            // Update AI service with latest bar data
+            updateAIServiceMarketData(symbol, msg.data)
+
             const chartBar = {
               time: Math.floor(new Date(msg.data.timestamp).getTime() / 1000) as any,
               open: msg.data.open,

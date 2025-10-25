@@ -70,6 +70,9 @@ start_service() {
 # Start API server
 start_service "api" "uvicorn api.main:app --host 0.0.0.0 --port 8000"
 
+# Start AI Service
+start_service "ai-service" "cd ai-service && ../venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002"
+
 # Start Historical WebSocket Server (separate thread for historical data replay)
 start_service "historical-ws" "python -u historical_websocket_server.py --port 8001"
 
@@ -89,17 +92,20 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "📊 Dashboard:          http://localhost:3000"
 echo "🔧 API:                http://localhost:8000"
 echo "📖 API Docs:           http://localhost:8000/docs"
+echo "🤖 AI Service:         http://localhost:8002"
 echo "📡 Historical WebSocket: ws://localhost:8001"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Services & Ports:"
 echo "  • API Server          → Port 8000  (REST endpoints)"
+echo "  • AI Service          → Port 8002  (JuiceBot AI)"
 echo "  • Historical WS       → Port 8001  (Bar-by-bar replay)"
 echo "  • Dashboard           → Port 3000  (Next.js UI)"
 echo "  • Screener            → Background (Databento live feed)"
 echo ""
 echo "PIDs:"
 echo "  • API:         $(cat .pids/api.pid 2>/dev/null || echo 'N/A')"
+echo "  • AI Service:  $(cat .pids/ai-service.pid 2>/dev/null || echo 'N/A')"
 echo "  • Historical:  $(cat .pids/historical-ws.pid 2>/dev/null || echo 'N/A')"
 echo "  • Screener:    $(cat .pids/screener.pid 2>/dev/null || echo 'N/A')"
 echo "  • Dashboard:   $(cat .pids/dashboard.pid 2>/dev/null || echo 'N/A')"
@@ -108,6 +114,7 @@ echo ""
 echo "To view logs:"
 echo "  ${BLUE}tail -f .pids/screener.log${NC}       # Screener output"
 echo "  ${BLUE}tail -f .pids/api.log${NC}            # API output"
+echo "  ${BLUE}tail -f .pids/ai-service.log${NC}     # AI Service output"
 echo "  ${BLUE}tail -f .pids/historical-ws.log${NC}  # Historical WebSocket output"
 echo "  ${BLUE}tail -f .pids/dashboard.log${NC}      # Dashboard output"
 echo ""

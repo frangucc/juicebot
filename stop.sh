@@ -49,6 +49,7 @@ stop_service() {
 if [ -d .pids ]; then
     stop_service "dashboard"
     stop_service "api"
+    stop_service "ai-service"
     stop_service "historical-ws"
     stop_service "screener"
 
@@ -65,7 +66,10 @@ if [ -d .pids ]; then
     # Kill any process on port 8001 (Historical WebSocket)
     lsof -ti:8001 | xargs kill -9 2>/dev/null || true
 
-    echo "${GREEN}✓ Ports cleaned (3000, 8000, 8001)${NC}"
+    # Kill any process on port 8002 (AI Service)
+    lsof -ti:8002 | xargs kill -9 2>/dev/null || true
+
+    echo "${GREEN}✓ Ports cleaned (3000, 8000, 8001, 8002)${NC}"
 else
     echo "No PID directory found. Services may not be running."
 
@@ -74,6 +78,7 @@ else
     lsof -ti:3000 | xargs kill -9 2>/dev/null || true
     lsof -ti:8000 | xargs kill -9 2>/dev/null || true
     lsof -ti:8001 | xargs kill -9 2>/dev/null || true
+    lsof -ti:8002 | xargs kill -9 2>/dev/null || true
 fi
 
 echo ""
