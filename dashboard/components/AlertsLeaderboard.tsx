@@ -116,7 +116,7 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
     return updatedSymbols
   }
 
-  // Fetch Discord juice box data
+  // Fetch Discord juice box data (deferred to load after leaderboard)
   useEffect(() => {
     const fetchDiscordJuice = async () => {
       try {
@@ -130,9 +130,13 @@ export function AlertsLeaderboard({ threshold, priceFilter, baselineFilter, setB
       }
     }
 
-    fetchDiscordJuice()
+    // Delay initial fetch by 2 seconds to let leaderboard load first
+    const initialTimeout = setTimeout(fetchDiscordJuice, 2000)
     const interval = setInterval(fetchDiscordJuice, 30000) // Refresh every 30 seconds
-    return () => clearInterval(interval)
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
+    }
   }, [])
 
   useEffect(() => {

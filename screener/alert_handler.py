@@ -35,11 +35,9 @@ class AlertHandler:
                     "threshold_exceeded": True,
                 },
                 "metadata": {
-                    "bid": float(alert_data["bid"]),
-                    "ask": float(alert_data["ask"]),
-                    "bid_size": int(alert_data["bid_size"]),
-                    "ask_size": int(alert_data["ask_size"]),
-                    "spread": float(alert_data["ask"] - alert_data["bid"]),
+                    "volume": int(alert_data.get("volume", 0)),  # Trade volume
+                    "side": alert_data.get("side", ""),  # Trade side (A=sell, B=buy)
+                    "data_source": "trades",  # Mark as trades schema
                 },
                 "sent_to_users": [],  # Will be populated when SMS sent
                 "active": True,

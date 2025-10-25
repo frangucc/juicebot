@@ -26,9 +26,12 @@ interface BarData {
 }
 
 export default function StockChart({ symbol, dataMode = 'live', onReplayStatusChange }: StockChartProps) {
-  const chartContainerRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<any>(null)
+  const priceChartRef = useRef<HTMLDivElement>(null)
+  const volumeChartRef = useRef<HTMLDivElement>(null)
+  const priceChartInstanceRef = useRef<any>(null)
+  const volumeChartInstanceRef = useRef<any>(null)
   const candlestickSeriesRef = useRef<any>(null)
+  const volumeSeriesRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const activeFVGsRef = useRef<any[]>([]) // Track active FVGs
   const [isLoading, setIsLoading] = useState(true)
@@ -41,29 +44,28 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
     progress: number
   }>({ isPlaying: false, currentIndex: 0, totalBars: 0, progress: 0 })
 
-  // Initialize chart once when component mounts
+  // Initialize charts once when component mounts
   useEffect(() => {
-    if (!chartContainerRef.current) return
+    if (!priceChartRef.current || !volumeChartRef.current) return
 
     let isMounted = true
-    let chart: any = null
-    let candlestickSeries: any = null
 
-    const initChart = async () => {
+    const initCharts = async () => {
       try {
-        const { createChart, ColorType, BarSeries } = await import('lightweight-charts')
+        const { createChart, ColorType, BarSeries, HistogramSeries } = await import('lightweight-charts')
 
-        if (!isMounted || !chartContainerRef.current) return
+        if (!isMounted || !priceChartRef.current || !volumeChartRef.current) return
 
-        console.log('Creating chart for', symbol)
+        console.log('Creating charts for', symbol)
 
-        chart = createChart(chartContainerRef.current, {
+        // Create price chart
+        const priceChart = createChart(priceChartRef.current, {
           layout: {
             background: { type: ColorType.Solid, color: '#0b0e13' },
             textColor: '#55b685',
           },
           grid: {
-            vertLines: { color: '#55b68533' },
+            vertLines: { visible: false },
             horzLines: { color: '#55b68533' },
           },
           rightPriceScale: {
@@ -76,20 +78,20 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
             borderColor: '#55b68533',
             timeVisible: true,
             secondsVisible: false,
-            rightOffset: 24,  // Add buffer space on the right (~40% of visible bars)
+            rightOffset: 24,  // Add buffer space on the right
             barSpacing: 6,    // Spacing between bars
             fixLeftEdge: false,
             fixRightEdge: false,
           },
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
+          width: priceChartRef.current.clientWidth,
+          height: priceChartRef.current.clientHeight,
         })
 
-        chartRef.current = chart
+        priceChartInstanceRef.current = priceChart
 
-        // Add bar series (OHLC bars instead of candlesticks)
-        candlestickSeries = chart.addSeries(BarSeries, {
-          thinBars: false,
+        // Add bar series
+        const candlestickSeries = priceChart.addSeries(BarSeries, {
+          thinBars: true,
           upColor: '#10B981',
           downColor: '#EF4444',
           openVisible: true,
@@ -97,11 +99,68 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
 
         candlestickSeriesRef.current = candlestickSeries
 
+        // Create volume chart
+        const volumeChart = createChart(volumeChartRef.current, {
+          layout: {
+            background: { type: ColorType.Solid, color: '#0b0e13' },
+            textColor: '#55b685',
+          },
+          grid: {
+            vertLines: { visible: false },
+            horzLines: { color: '#55b68533' },
+          },
+          rightPriceScale: {
+            borderColor: '#55b68533',
+          },
+          timeScale: {
+            borderColor: '#55b68533',
+            timeVisible: true,
+            secondsVisible: false,
+            rightOffset: 24,
+            barSpacing: 6,
+            fixLeftEdge: false,
+            fixRightEdge: false,
+          },
+          width: volumeChartRef.current.clientWidth,
+          height: volumeChartRef.current.clientHeight,
+        })
+
+        volumeChartInstanceRef.current = volumeChart
+
+        // Add volume histogram
+        const volumeSeries = volumeChart.addSeries(HistogramSeries, {
+          color: '#55b685',
+          priceFormat: {
+            type: 'volume',
+          },
+        })
+
+        volumeSeriesRef.current = volumeSeries
+
+        // Sync time scales
+        priceChart.timeScale().subscribeVisibleTimeRangeChange((timeRange: any) => {
+          if (timeRange) {
+            volumeChart.timeScale().setVisibleRange(timeRange)
+          }
+        })
+
+        volumeChart.timeScale().subscribeVisibleTimeRangeChange((timeRange: any) => {
+          if (timeRange) {
+            priceChart.timeScale().setVisibleRange(timeRange)
+          }
+        })
+
         const handleResize = () => {
-          if (chartContainerRef.current && chart) {
-            chart.applyOptions({
-              width: chartContainerRef.current.clientWidth,
-              height: chartContainerRef.current.clientHeight,
+          if (priceChartRef.current && priceChart) {
+            priceChart.applyOptions({
+              width: priceChartRef.current.clientWidth,
+              height: priceChartRef.current.clientHeight,
+            })
+          }
+          if (volumeChartRef.current && volumeChart) {
+            volumeChart.applyOptions({
+              width: volumeChartRef.current.clientWidth,
+              height: volumeChartRef.current.clientHeight,
             })
           }
         }
@@ -118,14 +177,19 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
       }
     }
 
-    initChart()
+    initCharts()
 
     return () => {
       isMounted = false
-      if (chart) {
-        chart.remove()
-        chartRef.current = null
+      if (priceChartInstanceRef.current) {
+        priceChartInstanceRef.current.remove()
+        priceChartInstanceRef.current = null
         candlestickSeriesRef.current = null
+      }
+      if (volumeChartInstanceRef.current) {
+        volumeChartInstanceRef.current.remove()
+        volumeChartInstanceRef.current = null
+        volumeSeriesRef.current = null
       }
     }
   }, [symbol])
@@ -164,10 +228,20 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
             close: bar.close,
           })).sort((a, b) => a.time - b.time)
 
+          const volumeData = bars.map(bar => ({
+            time: Math.floor(new Date(bar.timestamp).getTime() / 1000) as any,
+            value: bar.volume,
+            color: bar.close >= bar.open ? '#55b685' : '#ff0000',
+          })).sort((a, b) => a.time - b.time)
+
           if (candlestickSeriesRef.current) {
             candlestickSeriesRef.current.setData(chartData)
-            chartRef.current?.timeScale().fitContent()
+            priceChartInstanceRef.current?.timeScale().fitContent()
             setError(null)
+          }
+
+          if (volumeSeriesRef.current) {
+            volumeSeriesRef.current.setData(volumeData)
           }
         } catch (err: any) {
           console.error('Error fetching live data:', err)
@@ -207,6 +281,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
               high: msg.data.high,
               low: msg.data.low,
               close: msg.data.close,
+              volume: msg.data.volume,
             }
 
             setHistoricalData(prev => {
@@ -217,6 +292,14 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                 const newData = [...prev.slice(0, -1), chartBar]
                 if (candlestickSeriesRef.current) {
                   candlestickSeriesRef.current.setData(newData)
+                }
+                if (volumeSeriesRef.current) {
+                  const volumeData = newData.map(bar => ({
+                    time: bar.time,
+                    value: bar.volume,
+                    color: bar.close >= bar.open ? '#55b685' : '#ff0000',
+                  }))
+                  volumeSeriesRef.current.setData(volumeData)
                 }
                 return newData
               }
@@ -232,7 +315,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                 candlestickSeriesRef.current.setData(newData)
 
                 // Detect and draw FVGs
-                if (newData.length >= 3 && chartRef.current) {
+                if (newData.length >= 3 && priceChartInstanceRef.current) {
                   const bar1 = newData[newData.length - 3]
                   const bar2 = newData[newData.length - 2]
                   const bar3 = newData[newData.length - 1]
@@ -354,20 +437,25 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                   })
                 }
 
-                // Scroll to keep the latest bar visible with buffer space on right
-                if (chartRef.current) {
-                  const timeScale = chartRef.current.timeScale()
-                  // Get the logical range and shift it to show buffer on right
-                  const logicalRange = timeScale.getVisibleLogicalRange()
-                  if (logicalRange) {
-                    const barsToShow = logicalRange.to - logicalRange.from
-                    timeScale.setVisibleLogicalRange({
-                      from: newData.length - barsToShow + 24,
-                      to: newData.length + 24
-                    })
-                  }
+                // Scroll to show recent bars
+                if (priceChartInstanceRef.current && newData.length > 100) {
+                  const timeScale = priceChartInstanceRef.current.timeScale()
+                  timeScale.setVisibleLogicalRange({
+                    from: Math.max(0, newData.length - 100),
+                    to: newData.length + 10
+                  })
                 }
               }
+
+              if (volumeSeriesRef.current) {
+                const volumeData = newData.map(bar => ({
+                  time: bar.time,
+                  value: bar.volume,
+                  color: bar.close >= bar.open ? '#55b685' : '#ff0000',
+                }))
+                volumeSeriesRef.current.setData(volumeData)
+              }
+
               return newData
             })
 
@@ -426,7 +514,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
   }, [symbol, dataMode, isLoading])
 
   return (
-    <div className="h-full w-full relative" style={{ backgroundColor: '#0b0e13' }}>
+    <div className="h-full w-full relative flex flex-col" style={{ backgroundColor: '#0b0e13' }}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10" style={{ backgroundColor: '#0b0e13', color: '#55b685' }}>
           <div>Loading chart for {symbol}...</div>
@@ -442,7 +530,10 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
           )}
         </div>
       )}
-      <div ref={chartContainerRef} className="h-full w-full" />
+      {/* Price Chart - 70% */}
+      <div ref={priceChartRef} style={{ width: '100%', height: '70%' }} />
+      {/* Volume Chart - 30% */}
+      <div ref={volumeChartRef} style={{ width: '100%', height: '30%', borderTop: '1px solid #55b68533' }} />
     </div>
   )
 }

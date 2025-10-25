@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface StockChartProps {
   symbol: string
+  dataMode?: 'live' | 'historical'
 }
 
 interface BarData {
@@ -17,14 +18,22 @@ interface BarData {
   volume: number
 }
 
-export default function StockChart({ symbol }: StockChartProps) {
+export default function StockChart({ symbol, dataMode = 'live' }: StockChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<any>(null)
   const candlestickSeriesRef = useRef<any>(null)
+  const wsRef = useRef<WebSocket | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [historicalData, setHistoricalData] = useState<any[]>([])
+  const [replayStatus, setReplayStatus] = useState<{
+    isPlaying: boolean
+    currentIndex: number
+    totalBars: number
+    progress: number
+  }>({ isPlaying: false, currentIndex: 0, totalBars: 0, progress: 0 })
 
-  // Initialize chart once and fetch data when symbol changes
+  // Initialize chart once when component mounts
   useEffect(() => {
     if (!chartContainerRef.current) return
 
@@ -32,7 +41,7 @@ export default function StockChart({ symbol }: StockChartProps) {
     let chart: any = null
     let candlestickSeries: any = null
 
-    const initChartAndData = async () => {
+    const initChart = async () => {
       try {
         // Import chart library
         const { createChart, ColorType, CandlestickSeries } = await import('lightweight-charts')
@@ -40,7 +49,6 @@ export default function StockChart({ symbol }: StockChartProps) {
         if (!isMounted || !chartContainerRef.current) return
 
         console.log('Creating chart for', symbol)
-        console.log('Container dimensions:', chartContainerRef.current.clientWidth, 'x', chartContainerRef.current.clientHeight)
 
         // Create chart
         chart = createChart(chartContainerRef.current, {
@@ -86,22 +94,51 @@ export default function StockChart({ symbol }: StockChartProps) {
 
         window.addEventListener('resize', handleResize)
 
-        console.log('Chart created, fetching data...')
+        console.log('Chart created successfully!')
+        setIsLoading(false)
+      } catch (err: any) {
+        if (!isMounted) return
+        console.error('Error initializing chart:', err)
+        setError(`Failed to load chart: ${err.message}`)
+        setIsLoading(false)
+      }
+    }
 
-        // Fetch bar data
-        const response = await fetch(`${API_URL}/bars/${symbol}?limit=500`)
+    initChart()
+
+    return () => {
+      isMounted = false
+      if (chart) {
+        chart.remove()
+        chartRef.current = null
+        candlestickSeriesRef.current = null
+      }
+    }
+  }, [symbol])
+
+  // Fetch and update data periodically (every 5 seconds for live, once for historical)
+  useEffect(() => {
+    if (!candlestickSeriesRef.current) return
+
+    let intervalId: NodeJS.Timeout
+
+    const fetchData = async () => {
+      try {
+        // Choose endpoint based on data mode
+        const endpoint = dataMode === 'historical'
+          ? `${API_URL}/bars/${symbol}/historical?limit=1000`
+          : `${API_URL}/bars/${symbol}?limit=500`
+
+        const response = await fetch(endpoint)
         if (!response.ok) {
           throw new Error(`Failed to fetch bar data: ${response.statusText}`)
         }
 
         const bars: BarData[] = await response.json()
-        console.log(`Received ${bars.length} bars for ${symbol}`)
-
-        if (!isMounted) return
+        console.log(`[${new Date().toLocaleTimeString()}] Fetched ${bars.length} ${dataMode} bars for ${symbol}`)
 
         if (!bars || bars.length === 0) {
-          setError(`No chart data available for ${symbol}`)
-          setIsLoading(false)
+          setError(`No ${dataMode} chart data available for ${symbol}`)
           return
         }
 
@@ -117,35 +154,29 @@ export default function StockChart({ symbol }: StockChartProps) {
         // Sort by time ascending
         chartData.sort((a, b) => a.time - b.time)
 
-        console.log('Chart data sample:', chartData.slice(0, 3))
-
-        if (candlestickSeries && isMounted) {
-          console.log('Setting data on chart...')
-          candlestickSeries.setData(chartData)
-          chart?.timeScale().fitContent()
-          console.log('Data set successfully!')
-          setIsLoading(false)
+        if (candlestickSeriesRef.current) {
+          candlestickSeriesRef.current.setData(chartData)
+          chartRef.current?.timeScale().fitContent()
           setError(null)
         }
       } catch (err: any) {
-        if (!isMounted) return
-        console.error('Error initializing chart:', err)
-        setError(`Failed to load chart: ${err.message}`)
-        setIsLoading(false)
+        console.error('Error fetching chart data:', err)
+        setError(`Failed to update chart: ${err.message}`)
       }
     }
 
-    initChartAndData()
+    // Initial fetch
+    fetchData()
+
+    // Poll every 5 seconds only for live data
+    if (dataMode === 'live') {
+      intervalId = setInterval(fetchData, 5000)
+    }
 
     return () => {
-      isMounted = false
-      if (chart) {
-        chart.remove()
-        chartRef.current = null
-        candlestickSeriesRef.current = null
-      }
+      if (intervalId) clearInterval(intervalId)
     }
-  }, [symbol])
+  }, [symbol, dataMode, candlestickSeriesRef.current])
 
   return (
     <div className="h-full w-full relative bg-gray-950">

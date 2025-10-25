@@ -272,6 +272,43 @@ async def get_bars(symbol: str, limit: int = 500, include_legacy: bool = False):
         raise HTTPException(status_code=500, detail=f"Failed to fetch bar data: {str(e)}")
 
 
+@app.get("/bars/{symbol}/historical")
+async def get_historical_bars(symbol: str, limit: int = 500):
+    """
+    Get historical 1-minute OHLCV bars for a specific symbol from historical_bars table.
+
+    Args:
+        symbol: Stock symbol (e.g., 'BYND')
+        limit: Number of bars to return (default: 500, max: 2000)
+
+    Returns:
+        List of 1-minute OHLCV bars with timestamp, open, high, low, close, volume
+    """
+    try:
+        # Cap limit at 2000 for historical data
+        limit = min(limit, 2000)
+
+        # Query historical_bars table
+        response = (supabase.table("historical_bars")
+                   .select("*")
+                   .eq("symbol", symbol.upper())
+                   .order("timestamp", desc=True)
+                   .limit(limit)
+                   .execute())
+
+        if not response.data:
+            raise HTTPException(status_code=404, detail=f"No historical bar data found for symbol {symbol}")
+
+        # Reverse to get chronological order (oldest first)
+        bars = list(reversed(response.data))
+
+        return bars
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch historical bar data: {str(e)}")
+
+
 @app.get("/symbols/state")
 async def get_symbol_state(
     threshold: float = 1.0,
@@ -352,8 +389,26 @@ async def get_leaderboard(
         # Build query with database-level filtering
         query = supabase.table("symbol_state").select("*")
 
-        # CRITICAL: Only show symbols updated in the last 4 hours (to exclude stale data from previous days)
-        cutoff_time = datetime.now(pytz.UTC) - timedelta(hours=4)
+        # CRITICAL: Smart time filtering based on market status
+        # Show most recent trading data, even on weekends/holidays
+        et = pytz.timezone("US/Eastern")
+        now_et = datetime.now(et)
+
+        # Market hours: 9:30 AM - 4:00 PM ET, Mon-Fri
+        is_weekend = now_et.weekday() >= 5  # Saturday=5, Sunday=6
+        market_open_time = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close_time = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
+        is_market_hours = not is_weekend and market_open_time <= now_et <= market_close_time + timedelta(hours=1)
+
+        if is_market_hours:
+            # Market is LIVE - show data from last 4 hours only (current session)
+            cutoff_time = datetime.now(pytz.UTC) - timedelta(hours=4)
+        else:
+            # Market is CLOSED - find the last trading day's data
+            # Go back up to 7 days to cover long weekends/holidays
+            # This ensures Friday data shows on Saturday/Sunday
+            cutoff_time = datetime.now(pytz.UTC) - timedelta(days=7)
+
         query = query.gte("last_updated", cutoff_time.isoformat())
 
         # Apply price filter at database level
