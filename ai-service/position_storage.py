@@ -18,7 +18,7 @@ class PositionStorage:
     """Manages position persistence with P&L tracking and reversal logic."""
 
     def __init__(self, user_id: str = None):
-        # For now, use None for user_id to work without users table
+        # Use None for user_id to work without users table for now
         self.user_id = user_id
 
     def get_open_position(self, symbol: str) -> Optional[Dict]:
@@ -26,7 +26,9 @@ class PositionStorage:
         try:
             query = supabase.table('trades').select('*').eq(
                 'symbol', symbol
-            ).in_('status', ['entered', 'monitoring'])  # Open position statuses
+            ).eq(
+                'status', 'open'
+            )
 
             # Only filter by user_id if it's set
             if self.user_id:
@@ -131,17 +133,23 @@ class PositionStorage:
         # Create new position
         entry_value = quantity * entry_price
 
+        now = datetime.utcnow().isoformat()
         position_data = {
-            'user_id': self.user_id,
             'symbol': symbol,
             'side': side,
             'quantity': quantity,
             'entry_price': entry_price,
             'entry_value': entry_value,
-            'entry_time': datetime.utcnow().isoformat(),
+            'entry_time': now,
             'status': 'open',
             'realized_pnl': realized_pnl,  # Carry over from closed position
+            'created_at': now,
+            'updated_at': now,
         }
+
+        # Only add user_id if it's set
+        if self.user_id:
+            position_data['user_id'] = self.user_id
 
         result = supabase.table('trades').insert(position_data).execute()
 

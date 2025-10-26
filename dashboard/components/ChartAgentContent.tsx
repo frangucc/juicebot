@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import StockChart from './StockChartHistorical'
 import ChatInterface from './ChatInterface'
+import GamepadController from './GamepadController'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -86,6 +87,14 @@ export default function ChartAgentContent() {
           />
         </div>
       </div>
+
+      {/* Gamepad Controller Widget */}
+      <GamepadController
+        symbol={symbol}
+        onCommandExecute={(command, result) => {
+          console.log('Gamepad command executed:', command, result)
+        }}
+      />
     </div>
   )
 }

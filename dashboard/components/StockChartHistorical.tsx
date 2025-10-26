@@ -48,6 +48,21 @@ interface BarData {
   volume: number
 }
 
+interface Position {
+  id: string
+  symbol: string
+  side: 'long' | 'short'
+  quantity: number
+  entry_price: number
+  current_price: number
+  unrealized_pnl: number
+  unrealized_pnl_pct: number
+  realized_pnl: number
+  total_pnl: number
+  entry_time: string
+  status: string
+}
+
 export default function StockChart({ symbol, dataMode = 'live', onReplayStatusChange }: StockChartProps) {
   const priceChartRef = useRef<HTMLDivElement>(null)
   const volumeChartRef = useRef<HTMLDivElement>(null)
@@ -57,8 +72,10 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
   const volumeSeriesRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const activeFVGsRef = useRef<any[]>([]) // Track active FVGs
+  const positionLineRef = useRef<any>(null) // Track position price line
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [position, setPosition] = useState<Position | null>(null)
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [replayStatus, setReplayStatus] = useState<{
     isPlaying: boolean
@@ -243,6 +260,72 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
       }
     }
   }, [symbol])
+
+  // Fetch position data and update P&L
+  useEffect(() => {
+    if (!symbol) return
+
+    let intervalId: NodeJS.Timeout
+
+    const fetchPosition = async () => {
+      try {
+        const response = await fetch(`${AI_SERVICE_URL}/position/${symbol}`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        setPosition(data.position)
+      } catch (err) {
+        console.error('[Position] Error fetching position:', err)
+      }
+    }
+
+    // Initial fetch
+    fetchPosition()
+
+    // Poll every 1 second for live P&L updates
+    intervalId = setInterval(fetchPosition, 1000)
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [symbol])
+
+  // Update position line when position changes
+  useEffect(() => {
+    if (!candlestickSeriesRef.current) {
+      console.log('[Position Line] Chart not ready yet')
+      return
+    }
+
+    console.log('[Position Line] Position data:', position)
+
+    // Remove existing position line
+    if (positionLineRef.current) {
+      candlestickSeriesRef.current.removePriceLine(positionLineRef.current)
+      positionLineRef.current = null
+      console.log('[Position Line] Removed old position line')
+    }
+
+    // Add new position line if position exists
+    if (position) {
+      const color = position.side === 'short' ? '#EAB308' : '#A855F7' // Yellow for short, purple for long
+      const pnlDirection = position.unrealized_pnl >= 0 ? 'up' : 'down'
+      const pnlSign = position.unrealized_pnl >= 0 ? '+' : ''
+
+      console.log('[Position Line] Creating line at price:', position.entry_price, 'color:', color)
+
+      positionLineRef.current = candlestickSeriesRef.current.createPriceLine({
+        price: position.entry_price,
+        color: color,
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: `${position.side} ${position.quantity} ${pnlDirection} ${pnlSign}$${Math.abs(position.unrealized_pnl).toFixed(2)}`,
+      })
+
+      console.log('[Position Line] Line created successfully')
+    }
+  }, [position, candlestickSeriesRef.current])
 
   // Handle data fetching/streaming based on mode
   useEffect(() => {

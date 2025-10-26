@@ -38,6 +38,7 @@ class TradingClassifier:
         'volume', 'vol',
         'high', 'low', 'range',
         'close', 'exit', 'sell',
+        'flat', 'flatten',
     }
 
     # Trading notation patterns
@@ -45,7 +46,7 @@ class TradingClassifier:
     SHORT_PATTERN = re.compile(r'\b(short|sell)\s+(\d+)\s*@\s*[\$]?(\d+\.?\d*)', re.IGNORECASE)
     CLOSE_PATTERN = re.compile(r'\b(close|exit|sell)\s+(all|position|pos)\b', re.IGNORECASE)
 
-    def __init__(self, user_id: str = "default_user"):
+    def __init__(self, user_id: str = None):
         self.market_data = {}  # Store latest market data from WebSocket
         self.bar_history = []  # Store last 100 bars for analysis
         self.position_storage = PositionStorage(user_id=user_id)
@@ -123,6 +124,25 @@ class TradingClassifier:
                     text=result['fast_response'],
                     matched_pattern="close_position"
                 )
+
+        # Check for flat/flatten command
+        if msg_lower in ['flat', 'flatten']:
+            current_price = self.market_data.get(symbol, {}).get('price')
+            if current_price:
+                # Get current position
+                position = self.position_storage.get_open_position(symbol)
+                if position:
+                    # Close the position
+                    result = self.position_storage.close_position(symbol, current_price)
+                    return FastResponse(
+                        text=f"✓ FLATTENED\n{result['fast_response']}",
+                        matched_pattern="flatten"
+                    )
+                else:
+                    return FastResponse(
+                        text="⚠️ No open position to flatten",
+                        matched_pattern="flatten_no_position"
+                    )
 
         # Check for reserved keywords
         words = set(msg_lower.split())

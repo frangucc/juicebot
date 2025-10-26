@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from agents.smc_agent import SMCAgent
 from fast_classifier import TradingClassifier
 from websocket_client import BarDataClient
+from position_storage import PositionStorage
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -316,6 +317,69 @@ async def list_agents():
             }
         ]
     }
+
+
+@app.get("/position/{symbol}")
+async def get_position(symbol: str):
+    """
+    Get the current open position for a symbol with real-time P&L.
+
+    Returns:
+        Position data with calculated P&L based on current price.
+    """
+    try:
+        storage = PositionStorage()
+        position = storage.get_open_position(symbol)
+
+        if not position:
+            return {"position": None}
+
+        # Get current price from classifier if available
+        current_price = None
+        if symbol in classifiers:
+            classifier = classifiers[symbol]
+            if classifier.market_data and symbol in classifier.market_data:
+                current_price = classifier.market_data[symbol].get('price')
+
+        # If no current price from classifier, use entry price as fallback
+        if current_price is None:
+            current_price = position['entry_price']
+
+        # Calculate P&L
+        entry_price = position['entry_price']
+        quantity = position['quantity']
+        side = position['side']
+
+        if side == 'long':
+            pnl = (current_price - entry_price) * quantity
+            pnl_pct = ((current_price - entry_price) / entry_price) * 100
+        else:  # short
+            pnl = (entry_price - current_price) * quantity
+            pnl_pct = ((entry_price - current_price) / entry_price) * 100
+
+        # Add realized P&L
+        realized_pnl = position.get('realized_pnl', 0.0)
+        total_pnl = realized_pnl + pnl
+
+        return {
+            "position": {
+                "id": position['id'],
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "entry_price": entry_price,
+                "current_price": current_price,
+                "unrealized_pnl": pnl,
+                "unrealized_pnl_pct": pnl_pct,
+                "realized_pnl": realized_pnl,
+                "total_pnl": total_pnl,
+                "entry_time": position['entry_time'],
+                "status": position['status']
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching position: {str(e)}")
 
 
 if __name__ == "__main__":

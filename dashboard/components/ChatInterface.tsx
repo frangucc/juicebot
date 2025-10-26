@@ -16,7 +16,8 @@ interface ChatInterfaceProps {
 interface SlashCommand {
   name: string
   description: string
-  handler?: () => string
+  handler?: (args?: string[]) => string
+  subCommands?: SlashCommand[]
 }
 
 const SLASH_COMMANDS: SlashCommand[] = [
@@ -80,7 +81,49 @@ EXAMPLES:
   > close
 
 Note: These commands store to database
-and trigger clerk updates (coming soon).`
+and trigger clerk updates (coming soon).`,
+    subCommands: [
+      {
+        name: 'long',
+        description: 'Enter/add to long position 🟢 FAST',
+        handler: () => 'EXECUTE_DIRECT:long'
+      },
+      {
+        name: 'short',
+        description: 'Enter/add to short position 🟢 FAST',
+        handler: () => 'EXECUTE_DIRECT:short'
+      },
+      {
+        name: 'pos',
+        description: 'Check current position + P&L 🟢 FAST',
+        handler: () => 'EXECUTE_DIRECT:pos'
+      },
+      {
+        name: 'close',
+        description: 'Close position at market 🟢 FAST',
+        handler: () => 'EXECUTE_DIRECT:close'
+      },
+      {
+        name: 'flat',
+        description: 'Flatten all positions 🟢 FAST',
+        handler: () => 'EXECUTE_DIRECT:flat'
+      },
+      {
+        name: 'reset',
+        description: 'Reset P&L (start fresh session) 🔴 LLM',
+        handler: () => 'TRADE_RESET'
+      },
+      {
+        name: 'history',
+        description: 'View complete trade history 🔴 LLM',
+        handler: () => 'TRADE_HISTORY'
+      },
+      {
+        name: 'summary',
+        description: 'P&L summary and statistics 🔴 LLM',
+        handler: () => 'TRADE_SUMMARY'
+      }
+    ]
   },
   {
     name: '/strategy',
@@ -153,7 +196,24 @@ Use arrow keys to navigate, Enter/Tab to select.`
   {
     name: '/test',
     description: '🟢 Run integration tests',
-    handler: () => 'TEST_MODE_INIT' // Special flag to trigger test mode
+    handler: () => 'TEST_MODE_INIT', // Special flag to trigger test mode
+    subCommands: [
+      {
+        name: 'ai',
+        description: 'Full AI test with LLM calls',
+        handler: () => 'TEST_AI_FULL'
+      },
+      {
+        name: 'fast',
+        description: 'Test only fast commands',
+        handler: () => 'TEST_FAST_ONLY'
+      },
+      {
+        name: '-quick',
+        description: 'Quick test (no LLM)',
+        handler: () => 'TEST_QUICK'
+      }
+    ]
   },
 ]
 
@@ -188,10 +248,62 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Filter commands based on input
-  const filteredCommands = input.startsWith('/')
-    ? SLASH_COMMANDS.filter(cmd => cmd.name.startsWith(input.toLowerCase()))
-    : []
+  // Parse command path and get filtered commands
+  const getFilteredCommands = (): SlashCommand[] => {
+    if (!input.startsWith('/')) return []
+
+    // Parse the input into parts: /test ai -quick → ['test', 'ai', '-quick']
+    const inputWithoutSlash = input.slice(1) // Remove leading /
+    const parts = inputWithoutSlash.split(' ')
+    const currentPart = parts[parts.length - 1]
+    const completedParts = parts.slice(0, -1)
+
+    // If input ends with space, show sub-commands of the completed command
+    const endsWithSpace = input.endsWith(' ')
+
+    if (endsWithSpace && completedParts.length > 0) {
+      // Navigate to the parent command
+      let commands: SlashCommand[] = SLASH_COMMANDS
+      let parentCommand: SlashCommand | undefined
+
+      for (const part of completedParts) {
+        parentCommand = commands.find(cmd => cmd.name === `/${part}` || cmd.name === part)
+        if (!parentCommand || !parentCommand.subCommands) {
+          return []
+        }
+        commands = parentCommand.subCommands
+      }
+
+      // Return all sub-commands of the parent
+      return parentCommand?.subCommands || []
+    }
+
+    // Otherwise, filter commands at the current level
+    if (completedParts.length === 0) {
+      // Root level: filter by current part
+      return SLASH_COMMANDS.filter(cmd =>
+        cmd.name.toLowerCase().startsWith(`/${currentPart.toLowerCase()}`)
+      )
+    } else {
+      // Navigate to sub-commands
+      let commands: SlashCommand[] = SLASH_COMMANDS
+
+      for (const part of completedParts) {
+        const parentCommand = commands.find(cmd => cmd.name === `/${part}` || cmd.name === part)
+        if (!parentCommand || !parentCommand.subCommands) {
+          return []
+        }
+        commands = parentCommand.subCommands
+      }
+
+      // Filter sub-commands by current part
+      return commands.filter(cmd =>
+        cmd.name.toLowerCase().startsWith(currentPart.toLowerCase())
+      )
+    }
+  }
+
+  const filteredCommands = getFilteredCommands()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -199,6 +311,8 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
 
   useEffect(() => {
     scrollToBottom()
+    // Return focus to textarea after messages update
+    setTimeout(() => textareaRef.current?.focus(), 100)
   }, [messages])
 
   // Handle ESC key to abort LLM calls
@@ -405,30 +519,133 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
   }
 
   const handleCommandSelect = (command: SlashCommand) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: command.name
-    }
-    setMessages(prev => [...prev, userMessage])
+    // Build full command path
+    const inputWithoutSlash = input.slice(1)
+    const parts = inputWithoutSlash.split(' ').filter(p => p.length > 0)
+    const endsWithSpace = input.endsWith(' ')
 
-    // Check for test command
-    if (command.name === '/test') {
-      runIntegrationTests('full')
-      setInput('')
+    // If we're selecting a sub-command, append it to the current path
+    let newInput: string
+    if (parts.length > 0 && (endsWithSpace || parts[parts.length - 1] !== command.name.replace('/', ''))) {
+      // Append sub-command
+      const basePath = parts.slice(0, -1).join(' ')
+      newInput = basePath ? `/${basePath} ${command.name}` : `/${command.name.replace('/', '')}`
+    } else {
+      // Root level command
+      newInput = command.name
+    }
+
+    // If command has sub-commands, just set the input without space
+    // User must explicitly press space to see sub-commands
+    if (command.subCommands && command.subCommands.length > 0) {
+      setInput(newInput)
+      setSelectedCommandIndex(0)
       setShowCommands(false)
       setTimeout(() => textareaRef.current?.focus(), 0)
       return
     }
 
-    // Execute handler if it exists
+    // No sub-commands, execute the command
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: newInput
+    }
+    setMessages(prev => [...prev, userMessage])
+
+    // Handle command execution
     if (command.handler) {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: command.handler()
+      const result = command.handler()
+
+      // Check for EXECUTE_DIRECT flag - send directly to AI service
+      if (result.startsWith('EXECUTE_DIRECT:')) {
+        const directCommand = result.replace('EXECUTE_DIRECT:', '')
+
+        setInput('')
+        setShowCommands(false)
+        setIsLoading(true)
+        setLoadingStatus('gathering price action data from bars... (ESC to abort)')
+
+        const controller = new AbortController()
+        abortControllerRef.current = controller
+
+        fetch('http://localhost:8002/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: symbol,
+            message: directCommand,
+            conversation_id: Date.now().toString()
+          }),
+          signal: controller.signal
+        })
+          .then(res => res.json())
+          .then(data => {
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: data.response
+            }
+            setMessages(prev => [...prev, assistantMessage])
+          })
+          .catch(error => {
+            if (error.name !== 'AbortError') {
+              const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: `Error: ${error.message}`
+              }
+              setMessages(prev => [...prev, errorMessage])
+            }
+          })
+          .finally(() => {
+            setIsLoading(false)
+            setLoadingStatus('')
+            abortControllerRef.current = null
+            setTimeout(() => textareaRef.current?.focus(), 0)
+          })
+
+        return
       }
-      setMessages(prev => [...prev, assistantMessage])
+
+      // Check for other special flags
+      if (result === 'TEST_MODE_INIT' || result === 'TEST_AI_FULL') {
+        runIntegrationTests('full')
+      } else if (result === 'TEST_FAST_ONLY' || result === 'TEST_QUICK') {
+        runIntegrationTests('quick')
+      } else if (result === 'TRADE_RESET') {
+        // TODO: Implement trade reset
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Trade reset coming soon...'
+        }
+        setMessages(prev => [...prev, assistantMessage])
+      } else if (result === 'TRADE_HISTORY') {
+        // TODO: Implement trade history
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Trade history coming soon...'
+        }
+        setMessages(prev => [...prev, assistantMessage])
+      } else if (result === 'TRADE_SUMMARY') {
+        // TODO: Implement trade summary
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Trade summary coming soon...'
+        }
+        setMessages(prev => [...prev, assistantMessage])
+      } else {
+        // Regular command response
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: result
+        }
+        setMessages(prev => [...prev, assistantMessage])
+      }
     } else {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -636,7 +853,12 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
                   color: '#55b685'
                 }}
               >
-                <div className="font-bold">{cmd.name}</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-bold">{cmd.name}</div>
+                  {cmd.subCommands && cmd.subCommands.length > 0 && (
+                    <div className="text-xs opacity-50">→</div>
+                  )}
+                </div>
                 <div className="text-sm opacity-70 mt-1">{cmd.description}</div>
               </div>
             ))}

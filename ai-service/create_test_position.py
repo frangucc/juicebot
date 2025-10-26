@@ -14,7 +14,7 @@ from position_storage import PositionStorage
 
 def create_test_position():
     """Create test SHORT position for BYND."""
-    storage = PositionStorage(user_id="default_user")
+    storage = PositionStorage()  # No user_id - will be None
 
     # Record position: SHORT 1000 BYND @ $0.71
     result = storage.record_position(
