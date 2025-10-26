@@ -212,8 +212,9 @@ export default function StockChart({ symbol, dataMode = 'live' }: StockChartProp
     const fetchData = async () => {
       try {
         // Choose endpoint based on data mode
+        // For historical mode, request all available bars (API caps at 10000)
         const endpoint = dataMode === 'historical'
-          ? `${API_URL}/bars/${symbol}/historical?limit=1000`
+          ? `${API_URL}/bars/${symbol}/historical?limit=10000`
           : `${API_URL}/bars/${symbol}?limit=500`
 
         const response = await fetch(endpoint)

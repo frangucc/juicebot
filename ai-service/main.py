@@ -16,12 +16,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from agents.smc_agent import SMCAgent
-from fast_classifier import TradingClassifier
+from fast_classifier_v2 import TradingClassifierV2 as TradingClassifier
 from websocket_client import BarDataClient
 from position_storage import PositionStorage
+from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
+
+# Initialize Supabase client for historical data
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+supabase: Client = create_client(supabase_url, supabase_key) if supabase_url and supabase_key else None
 
 # Initialize FastAPI
 app = FastAPI(
@@ -62,6 +68,7 @@ class ChatResponse(BaseModel):
     response: str
     conversation_id: str
     timestamp: str
+    prompt: Optional[str] = None  # Full prompt sent to LLM
 
 
 class MemoryItem(BaseModel):
@@ -102,6 +109,172 @@ async def shutdown_event():
     print("[AI Service] 👋 Shutting down...")
 
 
+# Slash Command Handler
+async def handle_slash_command(msg: ChatMessage) -> Optional[ChatResponse]:
+    """Handle slash commands like /trade, /test, etc."""
+    import sys
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+    from trade_command_executor import TradeCommandExecutor
+
+    message = msg.message.strip()
+    parts = message.split()
+    command = parts[0].lower()
+
+    # /trade command - show available commands
+    if command == '/trade':
+        help_text = """TRADE COMMANDS:
+Type directly (no slash):
+
+BASIC:
+  long <qty> @ <price> → enter long ● F
+  short <qty> @ <price> → enter short ● F
+  pos / position → check position + P&L ● F
+  close / exit → close position ● F
+  flat → flatten all positions ● F
+  price / last → current price ● F
+  volume / vol → current volume ● F
+  range / high / low → today's range ● F
+
+ADVANCED:
+  accumulate → scale into position ● F
+  scaleout → scale out of position ● F
+  reverse → flip position instantly ● F
+  stop / sl → set stop loss ● F
+  bracket → entry + stop + target ● F
+  reset → clear session P&L ● F
+
+AI-ASSISTED:
+  flatten-smart → AI exit with limits ● F+AI
+  reverse-smart → AI reversal w/ safety ● F+AI
+
+EXAMPLES:
+  > long 1000 @ 0.57
+  > pos
+  > flat
+  > reverse
+
+All commands save to database."""
+
+        return ChatResponse(
+            response=help_text,
+            conversation_id=msg.conversation_id or "slash_trade",
+            timestamp=datetime.now().isoformat()
+        )
+
+    # /test command - run test suites
+    elif command == '/test':
+        if len(parts) < 2:
+            help_text = """/test - Test Suite
+
+Available tests:
+  /test trade        Test /trade commands
+  /test indicators   Test /indicators commands
+  /test strategy     Test /strategy commands
+
+Type: /test trade"""
+
+            return ChatResponse(
+                response=help_text,
+                conversation_id=msg.conversation_id or "slash_test",
+                timestamp=datetime.now().isoformat()
+            )
+
+        # Check for /test trade subcommands
+        if parts[1].lower() == 'trade':
+            # Default to 'fast' if no subcommand provided
+            if len(parts) < 3:
+                test_type = 'fast'
+                # Show confirmation that we're defaulting to fast
+                confirm_msg = "Running /test trade fast (default)...\n\n"
+            else:
+                test_type = parts[2].lower()
+                confirm_msg = ""
+
+            # Map: fast → core, all → all, ai → ai, -quick → core --fast
+            if test_type == 'fast':
+                suite = 'core'
+                fast_flag = False
+            elif test_type == 'all':
+                suite = 'all'
+                fast_flag = False
+            elif test_type == '-quick':
+                suite = 'core'
+                fast_flag = True
+            elif test_type == 'ai':
+                suite = 'ai'
+                fast_flag = False
+            else:
+                return ChatResponse(
+                    response=f"❌ Unknown test type: {test_type}\nUse: fast, all, ai, or -quick",
+                    conversation_id=msg.conversation_id or "slash_test_error",
+                    timestamp=datetime.now().isoformat()
+                )
+
+        elif parts[1].lower() == 'indicators':
+            return ChatResponse(
+                response="📊 Indicator tests coming soon...",
+                conversation_id=msg.conversation_id or "slash_test_indicators",
+                timestamp=datetime.now().isoformat()
+            )
+
+        elif parts[1].lower() == 'strategy':
+            return ChatResponse(
+                response="🔴 Strategy tests coming soon...",
+                conversation_id=msg.conversation_id or "slash_test_strategy",
+                timestamp=datetime.now().isoformat()
+            )
+
+        else:
+            return ChatResponse(
+                response=f"❌ Unknown test category: {parts[1]}\nUse: trade, indicators, or strategy",
+                conversation_id=msg.conversation_id or "slash_test_error",
+                timestamp=datetime.now().isoformat()
+            )
+
+        try:
+            # Import test suite
+            import asyncio
+            import subprocess
+
+            # Run tests in subprocess
+            cmd = ['python3', 'test_trade_commands.py', suite]
+            if fast_flag:
+                cmd.append('--fast')
+            cmd.extend(['--symbol', msg.symbol])
+
+            result = subprocess.run(
+                cmd,
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            output = confirm_msg + result.stdout + result.stderr if 'confirm_msg' in locals() else result.stdout + result.stderr
+
+            return ChatResponse(
+                response=output,
+                conversation_id=msg.conversation_id or "test_results",
+                timestamp=datetime.now().isoformat()
+            )
+
+        except subprocess.TimeoutExpired:
+            return ChatResponse(
+                response="⚠️ Test suite timed out after 60s",
+                conversation_id=msg.conversation_id or "test_error",
+                timestamp=datetime.now().isoformat()
+            )
+        except Exception as e:
+            return ChatResponse(
+                response=f"❌ Test error: {str(e)}",
+                conversation_id=msg.conversation_id or "test_error",
+                timestamp=datetime.now().isoformat()
+            )
+
+    return None
+
+
 # Routes
 @app.get("/")
 async def root():
@@ -126,18 +299,30 @@ async def chat(msg: ChatMessage):
     Returns:
         AI response
     """
+    # Check for slash commands
+    if msg.message.startswith('/'):
+        slash_response = await handle_slash_command(msg)
+        if slash_response:
+            return slash_response
+
     # Get or create classifier for this symbol
+    conversation_id = msg.conversation_id or f"conv_{msg.symbol}_{datetime.now().timestamp()}"
+
     if msg.symbol not in classifiers:
-        classifiers[msg.symbol] = TradingClassifier()
+        classifiers[msg.symbol] = TradingClassifier(conversation_id=conversation_id)
 
     classifier = classifiers[msg.symbol]
+
+    # Update classifier's conversation_id for state tracking
+    classifier.conversation_id = conversation_id
+    classifier.executor.conversation_id = conversation_id
 
     # Auto-subscribe to WebSocket bar data for this symbol
     if ws_client and ws_client.running and msg.symbol not in ws_client.subscribed_symbols:
         await ws_client.subscribe(msg.symbol)
 
     # Try fast-path first
-    fast_response = classifier.classify(msg.message, msg.symbol)
+    fast_response = await classifier.classify(msg.message, msg.symbol)
     if fast_response:
         return ChatResponse(
             response=fast_response.text,
@@ -145,9 +330,7 @@ async def chat(msg: ChatMessage):
             timestamp=datetime.now().isoformat()
         )
 
-    # Slow path - use LLM
-    conversation_id = msg.conversation_id or f"conv_{msg.symbol}_{datetime.now().timestamp()}"
-
+    # Slow path - use LLM (reuse conversation_id from above)
     if conversation_id not in active_agents:
         active_agents[conversation_id] = SMCAgent()
 
@@ -158,13 +341,14 @@ async def chat(msg: ChatMessage):
         classifier = classifiers.get(msg.symbol)
         bar_history = classifier.bar_history if classifier else []
 
-        # Analyze and respond (passing bar_history to tools)
-        response = await agent.analyze(msg.symbol, msg.message, bar_history)
+        # Analyze and respond (passing bar_history to tools) - returns (response, prompt)
+        response, prompt = await agent.analyze(msg.symbol, msg.message, bar_history)
 
         return ChatResponse(
             response=response,
             conversation_id=conversation_id,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
+            prompt=prompt
         )
 
     except Exception as e:

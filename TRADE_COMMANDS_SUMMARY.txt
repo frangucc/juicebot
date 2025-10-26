@@ -1,0 +1,31 @@
+=== JUICEBOT TRADING AGENT - ENHANCED ===
+
+🚀 NEW SMART FEATURES:
+
+1. MARKET VS LIMIT ORDERS:
+   - "buy 500"        → Market order (instant)
+   - "buy 500 @ .65"  → Limit order at $0.65
+
+2. SMART QUANTITIES:
+   - "sell all"   → Close 100%
+   - "sell half"  → Close 50%
+   - "sell 25%"   → Close 25%
+   - "sell 100"   → Close 100 shares
+
+3. NATURAL LANGUAGE:
+   - 18+ new aliases added
+   - "out", "done", "trim", "lighten", "p", "where"
+   - All case-insensitive
+
+4. EXAMPLES:
+   buy 500          → LONG 500 at market
+   long 1000 @ .65  → LONG 1000 at limit
+   sell half        → Exit 50% of position
+   trim             → Exit 25% of position
+   flat             → Close everything
+   pos              → Show position
+   p                → Show price
+
+✅ All commands are FAST-PATH (<50ms)
+✅ All positions tracked in Supabase with P&L
+✅ Database-driven (no hardcoded commands)

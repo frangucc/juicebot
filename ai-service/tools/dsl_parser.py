@@ -127,8 +127,14 @@ class DSLParser:
 
                 # Format result for display
                 if isinstance(result, dict):
+                    # For pattern detection results with new format
+                    if "patterns" in result and "confidence" in result:
+                        patterns = result["patterns"]
+                        confidence = result["confidence"]
+                        quality = result.get("data_quality", {}).get("quality_score", 0)
+                        results[tool.raw] = f"{len(patterns)} found (confidence: {confidence}/10, quality: {quality}/10)"
                     # For single value results (like current_price)
-                    if "price" in result:
+                    elif "price" in result:
                         results[tool.raw] = f"${result['price']:.2f}"
                     elif "relative_volume" in result:
                         results[tool.raw] = f"{result['relative_volume']}x avg"
@@ -137,7 +143,7 @@ class DSLParser:
                     else:
                         results[tool.raw] = str(result)
                 elif isinstance(result, list):
-                    # For list results (like FVGs, BoS)
+                    # For list results (old format, backwards compatibility)
                     results[tool.raw] = f"{len(result)} found"
                 else:
                     results[tool.raw] = str(result)

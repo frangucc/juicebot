@@ -17,7 +17,14 @@ from tools import (
     get_historical_bars,
     detect_fvg,
     detect_bos,
-    detect_choch
+    detect_choch,
+    detect_pattern_confluence
+)
+from tools.volume_analysis import (
+    get_volume_profile,
+    get_relative_volume,
+    get_vwap,
+    get_volume_trend
 )
 
 
@@ -131,6 +138,86 @@ class SMCAgent(BaseAgent):
                     },
                     "required": ["symbol"]
                 }
+            },
+            {
+                "name": "detect_pattern_confluence",
+                "description": "Detect confluence zones where multiple SMC patterns align (FVG + BoS, FVG + CHoCH). High confluence zones have stronger predictive power.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "lookback": {
+                            "type": "integer",
+                            "description": "Number of bars to analyze",
+                            "default": 50
+                        }
+                    },
+                    "required": ["symbol"]
+                }
+            },
+            {
+                "name": "get_volume_profile",
+                "description": "Get Volume Profile (VP) - shows price levels with highest volume concentration, Point of Control (POC), and Value Area",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "lookback": {
+                            "type": "integer",
+                            "description": "Number of bars to analyze",
+                            "default": 100
+                        }
+                    },
+                    "required": ["symbol"]
+                }
+            },
+            {
+                "name": "get_relative_volume",
+                "description": "Get Relative Volume (RVOL) - compares recent volume to earlier session. Shows if volume is cold/normal/hot/explosive",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "period": {
+                            "type": "integer",
+                            "description": "Number of bars to compare (compares last N vs previous N)",
+                            "default": 20
+                        }
+                    },
+                    "required": ["symbol"]
+                }
+            },
+            {
+                "name": "get_vwap",
+                "description": "Get Volume-Weighted Average Price (VWAP) - shows average price weighted by volume. Key level for institutional traders",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "lookback": {
+                            "type": "integer",
+                            "description": "Number of bars to analyze (390 = full day)",
+                            "default": 390
+                        }
+                    },
+                    "required": ["symbol"]
+                }
+            },
+            {
+                "name": "get_volume_trend",
+                "description": "Analyze volume trend - shows if volume is increasing/decreasing and if there's a recent spike. Helps identify momentum",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "lookback": {
+                            "type": "integer",
+                            "description": "Number of bars to analyze",
+                            "default": 50
+                        }
+                    },
+                    "required": ["symbol"]
+                }
             }
         ]
 
@@ -153,7 +240,7 @@ Remember:
 - Track positions when user enters trades
 """
 
-    async def analyze(self, symbol: str, user_message: str, bar_history: list = None) -> str:
+    async def analyze(self, symbol: str, user_message: str, bar_history: list = None) -> tuple[str, str]:
         """
         Analyze market data and respond to user message using Claude.
 
@@ -163,7 +250,7 @@ Remember:
             bar_history: List of bar data from WebSocket feed
 
         Returns:
-            Agent's response
+            Tuple of (agent's response, system prompt used)
         """
         # Store bar_history for tool execution
         self.bar_history = bar_history or []
@@ -174,11 +261,14 @@ Remember:
         # Build messages for Claude API
         messages = self.get_conversation_messages()
 
+        # Get system prompt (we'll return this)
+        system_prompt = self.get_system_prompt(symbol)
+
         # Call Claude with tool use
         response = self.client.messages.create(
             model=self.model,
             max_tokens=4096,
-            system=self.get_system_prompt(symbol),
+            system=system_prompt,
             tools=self.tools,
             messages=messages
         )
@@ -234,7 +324,7 @@ Remember:
         # Add to history
         self.add_message("assistant", final_response)
 
-        return final_response
+        return final_response, system_prompt
 
     async def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Any:
         """Execute a tool function by name."""
@@ -244,7 +334,12 @@ Remember:
             "get_price_range": get_price_range,
             "detect_fvg": detect_fvg,
             "detect_bos": detect_bos,
-            "detect_choch": detect_choch
+            "detect_choch": detect_choch,
+            "detect_pattern_confluence": detect_pattern_confluence,
+            "get_volume_profile": get_volume_profile,
+            "get_relative_volume": get_relative_volume,
+            "get_vwap": get_vwap,
+            "get_volume_trend": get_volume_trend
         }
 
         if tool_name not in tool_functions:
@@ -265,11 +360,25 @@ Remember:
                     bar_history,
                     tool_input.get("period", "today")
                 )
-            elif tool_name in ["detect_fvg", "detect_bos", "detect_choch"]:
+            elif tool_name in ["detect_fvg", "detect_bos", "detect_choch", "detect_pattern_confluence"]:
                 result = await func(
                     tool_input["symbol"],
                     bar_history,
                     tool_input.get("lookback", 50)
+                )
+            elif tool_name in ["get_volume_profile", "get_vwap", "get_volume_trend"]:
+                # Volume profile, VWAP, and volume trend with lookback parameter
+                result = await func(
+                    tool_input["symbol"],
+                    bar_history,
+                    tool_input.get("lookback", 100 if tool_name == "get_volume_profile" else (390 if tool_name == "get_vwap" else 50))
+                )
+            elif tool_name == "get_relative_volume":
+                # Relative volume with period parameter
+                result = await func(
+                    tool_input["symbol"],
+                    bar_history,
+                    tool_input.get("period", 20)
                 )
             else:
                 result = await func(**tool_input)

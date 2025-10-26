@@ -1,12 +1,29 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { CornerDownLeft } from 'lucide-react'
+import { CornerDownLeft, FileCode } from 'lucide-react'
+
+interface LLMDiagnostics {
+  request: {
+    symbol: string
+    message: string
+    conversation_id: string
+    timestamp: string
+  }
+  response: {
+    raw: string
+    statusCode: number
+    timestamp: string
+  }
+  prompt?: string
+}
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  diagnostics?: LLMDiagnostics
+  isLLM?: boolean
 }
 
 interface ChatInterfaceProps {
@@ -68,60 +85,171 @@ Coming soon...`
     handler: () => `TRADE COMMANDS:
 Type directly (no slash):
 
-long <qty> @ <price> → enter long 🟢 F+AI
-short <qty> @ <price> → enter short 🟢 F+AI
-pos/position → check position 🟢 F+AI
-close/exit → close position 🟢 F+AI
-flat → close all positions 🔴 F
+BASIC:
+  long <qty> @ <price> → enter long 🟢 F
+  short <qty> @ <price> → enter short 🟢 F
+  pos / position → check position 🟢 F
+  pl / pnl / profit → P&L summary 🟢 F
+  close / exit → close position 🟢 F
+  flat → flatten all positions 🟢 F
+  price / last → current price 🟢 F
+  volume / vol → current volume 🟢 F
+  range / high / low → today's range 🟢 F
+
+ADVANCED:
+  accumulate → scale into position 🟢 F
+  scaleout → scale out of position 🟢 F
+  reverse → flip position instantly 🟢 F
+  stop / sl → set stop loss 🟢 F
+  bracket → entry + stop + target 🟢 F
+  reset → clear session P&L 🟢 F
+
+AI-ASSISTED:
+  flatten-smart → AI exit with limits 🟢 F+AI
+  reverse-smart → AI reversal w/ safety 🟢 F+AI
 
 EXAMPLES:
   > long 1000 @ 0.57
-  > short 500 @ 12.45
   > pos
-  > close
+  > flat
+  > reverse
 
-Note: These commands store to database
-and trigger clerk updates (coming soon).`,
+All commands save to database.`,
     subCommands: [
+      // BASIC
       {
         name: 'long',
-        description: 'Enter/add to long position 🟢 FAST',
+        description: 'Open long position at market or specified price 🟢 F',
         handler: () => 'EXECUTE_DIRECT:long'
       },
       {
         name: 'short',
-        description: 'Enter/add to short position 🟢 FAST',
+        description: 'Open short position at market or specified price 🟢 F',
         handler: () => 'EXECUTE_DIRECT:short'
       },
       {
-        name: 'pos',
-        description: 'Check current position + P&L 🟢 FAST',
-        handler: () => 'EXECUTE_DIRECT:pos'
+        name: 'position',
+        description: 'Show current position with P&L 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:position'
+      },
+      {
+        name: 'pl',
+        description: 'Show P&L summary (unrealized + realized) 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:pl'
+      },
+      {
+        name: 'pnl',
+        description: 'Show P&L summary (alias for pl) 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:pnl'
+      },
+      {
+        name: 'profit',
+        description: 'Show P&L summary (alias for pl) 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:profit'
       },
       {
         name: 'close',
-        description: 'Close position at market 🟢 FAST',
+        description: 'Close all positions at market 🟢 F',
         handler: () => 'EXECUTE_DIRECT:close'
       },
       {
-        name: 'flat',
-        description: 'Flatten all positions 🟢 FAST',
-        handler: () => 'EXECUTE_DIRECT:flat'
+        name: 'flatten',
+        description: 'Immediately close all positions at market 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:flatten'
+      },
+      {
+        name: 'price',
+        description: 'Get current price 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:price'
+      },
+      {
+        name: 'volume',
+        description: 'Get current volume 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:volume'
+      },
+      {
+        name: 'range',
+        description: 'Get todays high/low range 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:range'
+      },
+      // ADVANCED
+      {
+        name: 'accumulate',
+        description: 'Gradually build position over time (scale in) 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:accumulate'
+      },
+      {
+        name: 'scaleout',
+        description: 'Gradually exit position in chunks 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:scaleout'
+      },
+      {
+        name: 'reverse',
+        description: 'Instantly flip position (long to short or vice versa) 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:reverse'
+      },
+      {
+        name: 'stop',
+        description: 'Set stop loss for current position 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:stop'
+      },
+      {
+        name: 'bracket',
+        description: 'Create bracket order (entry + stop + target) 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:bracket'
       },
       {
         name: 'reset',
-        description: 'Reset P&L (start fresh session) 🔴 LLM',
-        handler: () => 'TRADE_RESET'
+        description: 'Clear session P&L and start fresh 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:reset'
+      },
+      // AI-ASSISTED
+      {
+        name: 'flatten-smart',
+        description: 'AI-assisted flatten with limit orders and safety checks 🟢 F+AI',
+        handler: () => 'EXECUTE_DIRECT:flatten-smart'
       },
       {
-        name: 'history',
-        description: 'View complete trade history 🔴 LLM',
-        handler: () => 'TRADE_HISTORY'
+        name: 'reverse-smart',
+        description: 'AI-assisted reversal with safety checks 🟢 F+AI',
+        handler: () => 'EXECUTE_DIRECT:reverse-smart'
+      }
+    ]
+  },
+  {
+    name: '/indicators',
+    description: '🟢 Technical indicators',
+    handler: () => `TECHNICAL INDICATORS:
+Type directly (no slash):
+
+VOLUME INDICATORS:
+  vp → Volume Profile (POC & value area) 🟢 F
+  rvol → Relative Volume (hot/cold/explosive) 🟢 F
+  vwap → Volume-Weighted Average Price 🟢 F
+  voltrend → Volume trend analysis 🟢 F
+
+All indicators use bar history data only.
+Fast execution, no AI required.`,
+    subCommands: [
+      {
+        name: 'vp',
+        description: 'Volume Profile - POC and value area 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:vp'
       },
       {
-        name: 'summary',
-        description: 'P&L summary and statistics 🔴 LLM',
-        handler: () => 'TRADE_SUMMARY'
+        name: 'rvol',
+        description: 'Relative Volume - hot/cold/explosive 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:rvol'
+      },
+      {
+        name: 'vwap',
+        description: 'Volume-Weighted Average Price 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:vwap'
+      },
+      {
+        name: 'voltrend',
+        description: 'Volume Trend - increasing/decreasing 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:voltrend'
       }
     ]
   },
@@ -196,22 +324,44 @@ Use arrow keys to navigate, Enter/Tab to select.`
   {
     name: '/test',
     description: '🟢 Run integration tests',
-    handler: () => 'TEST_MODE_INIT', // Special flag to trigger test mode
+    handler: () => 'TEST_MODE_INIT',
     subCommands: [
       {
-        name: 'ai',
-        description: 'Full AI test with LLM calls',
-        handler: () => 'TEST_AI_FULL'
+        name: 'trade',
+        description: 'Test /trade commands',
+        handler: () => 'TEST_TRADE_INIT',
+        subCommands: [
+          {
+            name: 'fast',
+            description: 'Test basic commands (entry/exit/position)',
+            handler: () => 'TEST_FAST_ONLY'
+          },
+          {
+            name: 'all',
+            description: 'Test all commands (including bracket, stops)',
+            handler: () => 'TEST_ALL_COMMANDS'
+          },
+          {
+            name: 'ai',
+            description: 'Full AI test with LLM calls',
+            handler: () => 'TEST_AI_FULL'
+          },
+          {
+            name: '-quick',
+            description: 'Quick test (no LLM)',
+            handler: () => 'TEST_QUICK'
+          }
+        ]
       },
       {
-        name: 'fast',
-        description: 'Test only fast commands',
-        handler: () => 'TEST_FAST_ONLY'
+        name: 'indicators',
+        description: 'Test /indicators commands',
+        handler: () => 'TEST_INDICATORS'
       },
       {
-        name: '-quick',
-        description: 'Quick test (no LLM)',
-        handler: () => 'TEST_QUICK'
+        name: 'strategy',
+        description: 'Test /strategy commands',
+        handler: () => 'TEST_STRATEGY'
       }
     ]
   },
@@ -230,6 +380,7 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
   const [isTestMode, setIsTestMode] = useState(false)
   const [testResults, setTestResults] = useState<TestResult[]>([])
   const [currentTestPhase, setCurrentTestPhase] = useState<'fast' | 'ai-prompt' | 'ai-running' | 'complete'>('fast')
+  const [conversationId, setConversationId] = useState<string>(`conv_${symbol}_${Date.now()}`)
 
   useEffect(() => {
     setIsMounted(true)
@@ -244,6 +395,9 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
   const [loadingStatus, setLoadingStatus] = useState('')
   const [showCommands, setShowCommands] = useState(false)
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const [selectedDiagnostics, setSelectedDiagnostics] = useState<LLMDiagnostics | null>(null)
+  const [trackingMessageId, setTrackingMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -315,26 +469,45 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
     setTimeout(() => textareaRef.current?.focus(), 100)
   }, [messages])
 
-  // Handle ESC key to abort LLM calls
+  // Auto-update diagnostics modal when tracking message gets updated
+  useEffect(() => {
+    if (trackingMessageId && showDiagnostics) {
+      const message = messages.find(m => m.id === trackingMessageId)
+      if (message?.diagnostics) {
+        setSelectedDiagnostics(message.diagnostics)
+      }
+    }
+  }, [messages, trackingMessageId, showDiagnostics])
+
+  // Handle ESC key to abort LLM calls or close diagnostic modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isLoading && abortControllerRef.current) {
-        abortControllerRef.current.abort()
-        setIsLoading(false)
-        setLoadingStatus('')
-
-        const abortMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: '⚠️ Request aborted by user'
+      if (e.key === 'Escape') {
+        // Close diagnostic modal first if open
+        if (showDiagnostics) {
+          setShowDiagnostics(false)
+          return
         }
-        setMessages(prev => [...prev, abortMessage])
+
+        // Otherwise abort LLM call if loading
+        if (isLoading && abortControllerRef.current) {
+          abortControllerRef.current.abort()
+          setIsLoading(false)
+          setLoadingStatus('')
+
+          const abortMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: '⚠️ Request aborted by user'
+          }
+          setMessages(prev => [...prev, abortMessage])
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isLoading])
+  }, [isLoading, showDiagnostics])
 
   const runIntegrationTests = async (mode: 'full' | 'quick' = 'full') => {
     setIsTestMode(true)
@@ -356,9 +529,9 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
       { cmd: 'price', type: 'F' as const, expectedPattern: /\$[\d.]+/ },
       { cmd: 'volume', type: 'F' as const, expectedPattern: /Vol:/ },
       { cmd: 'high', type: 'F' as const, expectedPattern: /High:.*Low:/ },
-      { cmd: 'long 100 @ 0.50', type: 'F' as const, expectedPattern: /✓ (LONG|CLOSED)/ },
+      { cmd: 'long 100 @ 0.50', type: 'F' as const, expectedPattern: /✓ (LONG|ADDED)/ },
       { cmd: 'pos', type: 'F' as const, expectedPattern: /(LONG|SHORT|No open position)/ },
-      { cmd: 'close position', type: 'F' as const, expectedPattern: /(✓ CLOSED|No open position)/ },
+      { cmd: 'flat', type: 'F' as const, expectedPattern: /(✓ FLATTENED|✓ CLOSED|No open position)/ },
     ]
 
     for (const test of fastTests) {
@@ -535,17 +708,15 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
       newInput = command.name
     }
 
-    // If command has sub-commands, just set the input without space
-    // User must explicitly press space to see sub-commands
+    // If command has sub-commands, just complete the input and show sub-commands
     if (command.subCommands && command.subCommands.length > 0) {
-      setInput(newInput)
+      setInput(newInput + ' ')
+      setShowCommands(true)
       setSelectedCommandIndex(0)
-      setShowCommands(false)
-      setTimeout(() => textareaRef.current?.focus(), 0)
       return
     }
 
-    // No sub-commands, execute the command
+    // Execute the command
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -569,24 +740,69 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
         const controller = new AbortController()
         abortControllerRef.current = controller
 
+        const requestPayload = {
+          symbol: symbol,
+          message: directCommand,
+          conversation_id: Date.now().toString()
+        }
+        const requestTimestamp = new Date().toISOString()
+
+        // Initialize diagnostics immediately
+        setSelectedDiagnostics({
+          request: {
+            symbol: requestPayload.symbol,
+            message: requestPayload.message,
+            conversation_id: requestPayload.conversation_id,
+            timestamp: requestTimestamp
+          },
+          response: {
+            raw: '⏳ Waiting for response...',
+            statusCode: 0,
+            timestamp: ''
+          },
+          prompt: '⏳ Generating prompt...'
+        })
+
         fetch('http://localhost:8002/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            symbol: symbol,
-            message: directCommand,
-            conversation_id: Date.now().toString()
-          }),
+          body: JSON.stringify(requestPayload),
           signal: controller.signal
         })
-          .then(res => res.json())
-          .then(data => {
+          .then(res => {
+            const responseTimestamp = new Date().toISOString()
+            return res.json().then(data => ({ data, status: res.status, responseTimestamp }))
+          })
+          .then(({ data, status, responseTimestamp }) => {
+            // Only mark as LLM if there's actually a prompt (fast responses return prompt: null)
+            const isActuallyLLM = data.prompt != null
+
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
-              content: data.response
+              content: data.response,
+              isLLM: isActuallyLLM,
+              diagnostics: isActuallyLLM ? {
+                request: {
+                  symbol: requestPayload.symbol,
+                  message: requestPayload.message,
+                  conversation_id: requestPayload.conversation_id,
+                  timestamp: requestTimestamp
+                },
+                response: {
+                  raw: JSON.stringify(data, null, 2),
+                  statusCode: status,
+                  timestamp: responseTimestamp
+                },
+                prompt: data.prompt
+              } : undefined
             }
             setMessages(prev => [...prev, assistantMessage])
+
+            // Track this message for real-time diagnostic updates
+            if (isActuallyLLM && assistantMessage.diagnostics) {
+              setTrackingMessageId(assistantMessage.id)
+            }
           })
           .catch(error => {
             if (error.name !== 'AbortError') {
@@ -728,16 +944,36 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
     try {
       // Call JuiceBot AI service
       setLoadingStatus('analyzing with claude sonnet 4.5 + SMC tools... (ESC to abort)')
+
+      const requestPayload = {
+        symbol: symbol,
+        message: userMessage.content,
+        conversation_id: conversationId
+      }
+      const requestTimestamp = new Date().toISOString()
+
+      // Initialize diagnostics immediately so icon is clickable during loading
+      setSelectedDiagnostics({
+        request: {
+          symbol: requestPayload.symbol,
+          message: requestPayload.message,
+          conversation_id: requestPayload.conversation_id,
+          timestamp: requestTimestamp
+        },
+        response: {
+          raw: '⏳ Waiting for response...',
+          statusCode: 0,
+          timestamp: ''
+        },
+        prompt: '⏳ Generating prompt...'
+      })
+
       const response = await fetch('http://localhost:8002/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          symbol: symbol,
-          message: userMessage.content,
-          conversation_id: `conv_${symbol}_${Date.now()}`
-        }),
+        body: JSON.stringify(requestPayload),
         signal: abortControllerRef.current.signal
       })
 
@@ -747,14 +983,44 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
 
       setLoadingStatus('processing response...')
       const data = await response.json()
+      const responseTimestamp = new Date().toISOString()
+
+      // Update conversation_id from backend response to maintain state
+      if (data.conversation_id) {
+        setConversationId(data.conversation_id)
+      }
+
+      // Only mark as LLM if there's actually a prompt (fast responses return prompt: null)
+      const isActuallyLLM = data.prompt != null
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response
+        content: data.response,
+        isLLM: isActuallyLLM,
+        diagnostics: isActuallyLLM ? {
+          request: {
+            symbol: requestPayload.symbol,
+            message: requestPayload.message,
+            conversation_id: requestPayload.conversation_id,
+            timestamp: requestTimestamp
+          },
+          response: {
+            raw: JSON.stringify(data, null, 2),
+            statusCode: response.status,
+            timestamp: responseTimestamp
+          },
+          prompt: data.prompt
+        } : undefined
       }
 
       setMessages(prev => [...prev, assistantMessage])
+
+      // Track this message for real-time diagnostic updates
+      if (isActuallyLLM && assistantMessage.diagnostics) {
+        setTrackingMessageId(assistantMessage.id)
+      }
+
       setLoadingStatus('')
     } catch (error) {
       // Check if it was aborted
@@ -799,31 +1065,64 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} group`}
           >
-            <div
-              className="max-w-[90%] text-base leading-relaxed"
-              style={{
-                fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
-                color: message.role === 'user' ? '#6b7280' : '#55b685',
-                whiteSpace: 'pre-wrap'
-              }}
-            >
-              {message.content}
+            <div className="flex items-start gap-2 max-w-[90%]">
+              <div
+                className="text-base leading-relaxed flex-1"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: message.role === 'user' ? '#6b7280' : '#55b685',
+                  whiteSpace: 'pre-wrap'
+                }}
+              >
+                {message.content}
+              </div>
+              {message.isLLM && message.diagnostics && (
+                <button
+                  onClick={() => {
+                    setSelectedDiagnostics(message.diagnostics!)
+                    setTrackingMessageId(message.id)
+                    setShowDiagnostics(true)
+                  }}
+                  className="opacity-50 hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
+                  style={{ color: '#55b685' }}
+                  title="View LLM diagnostics"
+                >
+                  <FileCode size={16} />
+                </button>
+              )}
             </div>
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
-            <div style={{ fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace', color: '#55b685' }}>
-              <div className="flex gap-2 items-center">
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-4 animate-bounce" style={{ backgroundColor: '#55b685', animationDelay: '0ms' }}></div>
-                  <div className="w-1.5 h-4 animate-bounce" style={{ backgroundColor: '#55b685', animationDelay: '150ms' }}></div>
-                  <div className="w-1.5 h-4 animate-bounce" style={{ backgroundColor: '#55b685', animationDelay: '300ms' }}></div>
+          <div className="flex justify-start group">
+            <div className="flex items-start gap-2 max-w-[90%]">
+              <div
+                style={{ fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace', color: '#55b685' }}
+                className="flex-1"
+              >
+                <div className="flex gap-2 items-center">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-4 animate-bounce" style={{ backgroundColor: '#55b685', animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-4 animate-bounce" style={{ backgroundColor: '#55b685', animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-4 animate-bounce" style={{ backgroundColor: '#55b685', animationDelay: '300ms' }}></div>
+                  </div>
+                  {loadingStatus && <span className="text-sm opacity-70">{loadingStatus}</span>}
                 </div>
-                {loadingStatus && <span className="text-sm opacity-70">{loadingStatus}</span>}
               </div>
+              <button
+                onClick={() => {
+                  if (selectedDiagnostics) {
+                    setShowDiagnostics(true)
+                  }
+                }}
+                className="opacity-50 hover:opacity-100 transition-opacity flex-shrink-0 mt-1 animate-pulse"
+                style={{ color: '#55b685' }}
+                title="View LLM diagnostics (processing...)"
+              >
+                <FileCode size={16} />
+              </button>
             </div>
           </div>
         )}
@@ -877,6 +1176,19 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
               }
             }}
             onKeyDown={(e) => {
+              // Ctrl+C (or Cmd+C on Mac) with no selection clears input
+              if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                const textarea = e.target as HTMLTextAreaElement
+                // Only clear if there's no text selection
+                if (textarea.selectionStart === textarea.selectionEnd) {
+                  e.preventDefault()
+                  setInput('')
+                  setShowCommands(false)
+                  return
+                }
+                // Otherwise let default copy behavior happen
+              }
+
               if (filteredCommands.length > 0 && showCommands) {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault()
@@ -922,6 +1234,165 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
           </button>
         </form>
       </div>
+
+      {/* Diagnostic Modal - Left 25% Overlay */}
+      {showDiagnostics && selectedDiagnostics && (
+        <div
+          className="fixed inset-0 z-50 flex"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDiagnostics(false)
+            }
+          }}
+        >
+          {/* Diagnostic Panel - Left 25% */}
+          <div
+            className="w-1/4 h-full overflow-y-auto p-6 geek-scanline"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.95)',
+              borderRight: '1px solid #55b68533'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2
+                className="text-lg font-bold"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685'
+                }}
+              >
+                LLM DIAGNOSTICS
+              </h2>
+              <button
+                onClick={() => setShowDiagnostics(false)}
+                className="opacity-50 hover:opacity-100 transition-opacity"
+                style={{ color: '#55b685' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Request Section */}
+            <div className="mb-6">
+              <h3
+                className="text-sm font-bold mb-3 opacity-70"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685'
+                }}
+              >
+                REQUEST
+              </h3>
+              <div
+                className="text-xs space-y-2 p-3 rounded"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685',
+                  backgroundColor: 'rgba(85, 182, 133, 0.05)',
+                  border: '1px solid #55b68533'
+                }}
+              >
+                <div>
+                  <span className="opacity-50">Symbol:</span> {selectedDiagnostics.request.symbol}
+                </div>
+                <div>
+                  <span className="opacity-50">Message:</span> {selectedDiagnostics.request.message}
+                </div>
+                <div>
+                  <span className="opacity-50">Conversation ID:</span>
+                  <div className="break-all text-[10px] mt-1">{selectedDiagnostics.request.conversation_id}</div>
+                </div>
+                <div>
+                  <span className="opacity-50">Timestamp:</span>
+                  <div className="text-[10px] mt-1">{selectedDiagnostics.request.timestamp}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt Section */}
+            <div className="mb-6">
+              <h3
+                className="text-sm font-bold mb-3 opacity-70"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685'
+                }}
+              >
+                PROMPT
+              </h3>
+              <div
+                className="text-xs p-3 rounded whitespace-pre-wrap"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685',
+                  backgroundColor: 'rgba(85, 182, 133, 0.05)',
+                  border: '1px solid #55b68533',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}
+              >
+                {selectedDiagnostics.prompt}
+              </div>
+            </div>
+
+            {/* Response Section */}
+            <div>
+              <h3
+                className="text-sm font-bold mb-3 opacity-70"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685'
+                }}
+              >
+                RESPONSE
+              </h3>
+              <div className="space-y-2 mb-3">
+                <div
+                  className="text-xs"
+                  style={{
+                    fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                    color: '#55b685'
+                  }}
+                >
+                  <span className="opacity-50">Status Code:</span> {selectedDiagnostics.response.statusCode}
+                </div>
+                <div
+                  className="text-xs"
+                  style={{
+                    fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                    color: '#55b685'
+                  }}
+                >
+                  <span className="opacity-50">Timestamp:</span>
+                  <div className="text-[10px] mt-1">{selectedDiagnostics.response.timestamp}</div>
+                </div>
+              </div>
+              <div
+                className="text-xs p-3 rounded whitespace-pre-wrap"
+                style={{
+                  fontFamily: 'SF Mono, Menlo, Monaco, Courier New, monospace',
+                  color: '#55b685',
+                  backgroundColor: 'rgba(85, 182, 133, 0.05)',
+                  border: '1px solid #55b68533',
+                  maxHeight: '300px',
+                  overflowY: 'auto'
+                }}
+              >
+                {selectedDiagnostics.response.raw}
+              </div>
+            </div>
+          </div>
+
+          {/* Darkened Right Side - Clickable to close */}
+          <div
+            className="flex-1"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+            onClick={() => setShowDiagnostics(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }

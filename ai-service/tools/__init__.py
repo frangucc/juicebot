@@ -12,7 +12,8 @@ from .market_data import (
     get_historical_bars,
     detect_fvg,
     detect_bos,
-    detect_choch
+    detect_choch,
+    detect_pattern_confluence
 )
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "get_historical_bars",
     "detect_fvg",
     "detect_bos",
-    "detect_choch"
+    "detect_choch",
+    "detect_pattern_confluence"
 ]
