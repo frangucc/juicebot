@@ -36,7 +36,7 @@ class AlertHandler:
                 },
                 "metadata": {
                     "volume": int(alert_data.get("volume", 0)),  # Trade volume
-                    "side": alert_data.get("side", ""),  # Trade side (A=sell, B=buy)
+                    "side": str(alert_data.get("side", "")) if alert_data.get("side") else "",  # Trade side (A=sell, B=buy)
                     "data_source": "trades",  # Mark as trades schema
                 },
                 "sent_to_users": [],  # Will be populated when SMS sent

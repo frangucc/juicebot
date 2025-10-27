@@ -97,9 +97,9 @@ class PriceMovementScanner:
             last_trading_day -= timedelta(days=1)
         last_trading_day_date = last_trading_day.date()
 
-        # For historical data, end date should also be last trading day
-        # (can't request future dates from Databento)
-        end_date = last_trading_day_date
+        # Databento requires end > start, so use next day as end
+        # (end is exclusive in Databento API)
+        end_date = (last_trading_day + timedelta(days=1)).date()
 
         print(f"[{self._now()}] Loading closes from {last_trading_day_date} (last trading day)")
 
