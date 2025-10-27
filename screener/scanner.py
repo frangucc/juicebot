@@ -86,21 +86,30 @@ class PriceMovementScanner:
         self._load_previous_close_prices()
 
     def _load_previous_close_prices(self) -> None:
-        """Load yesterday's closing prices for all symbols."""
-        print(f"[{self._now()}] Loading previous day's closing prices...")
+        """Load previous trading day's closing prices for all symbols."""
+        print(f"[{self._now()}] Loading previous trading day's closing prices...")
 
         client = db.Historical(key=settings.databento_api_key)
 
-        now = pd.Timestamp(self.today).date()
-        yesterday = (pd.Timestamp(self.today) - timedelta(days=1)).date()
+        # Find last trading day (skip weekends)
+        last_trading_day = pd.Timestamp(self.today) - timedelta(days=1)
+        while last_trading_day.weekday() >= 5:  # 5=Saturday, 6=Sunday
+            last_trading_day -= timedelta(days=1)
+        last_trading_day_date = last_trading_day.date()
 
-        # Get yesterday's closing prices from Databento
+        # For historical data, end date should also be last trading day
+        # (can't request future dates from Databento)
+        end_date = last_trading_day_date
+
+        print(f"[{self._now()}] Loading closes from {last_trading_day_date} (last trading day)")
+
+        # Get last trading day's closing prices from Databento
         data = client.timeseries.get_range(
             dataset="EQUS.SUMMARY",
             schema="ohlcv-1d",
             symbols="ALL_SYMBOLS",
-            start=yesterday,
-            end=now,
+            start=last_trading_day_date,
+            end=end_date,
         )
 
         # Request symbology mapping

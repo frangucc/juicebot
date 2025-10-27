@@ -314,6 +314,34 @@ Not yet implemented.`
 Coming soon...`
   },
   {
+    name: '/murphy',
+    description: '🟢 Murphy market classifier',
+    handler: () => `MURPHY CLASSIFIER:
+Get Murphy's market reading for current setup.
+
+USAGE:
+  murphy → Analyze current price action
+  murphy [price] → Analyze specific level
+
+OUTPUTS:
+  • Direction: ↑ ↓ − (bullish/bearish/neutral)
+  • Stars: **** (0-4 conviction rating)
+  • Grade: [1-10] (strength score)
+  • Interpretation: Volume, FVG, rejection analysis
+
+ENHANCED V2 FEATURES:
+  • Liquidity sweeps detection
+  • Price rejection wicks
+  • Multi-bar patterns
+  • FVG magnetism & support/resistance
+
+EXAMPLES:
+  > murphy
+  > murphy 0.66
+
+Murphy analyzes last 50 bars for volume patterns, liquidity levels, and momentum shifts.`
+  },
+  {
     name: '/help',
     description: '🟢 Get help with commands',
     handler: () => `HELP:
@@ -413,6 +441,7 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [selectedDiagnostics, setSelectedDiagnostics] = useState<LLMDiagnostics | null>(null)
   const [trackingMessageId, setTrackingMessageId] = useState<string | null>(null)
+  const [murphyLive, setMurphyLive] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -493,6 +522,28 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
       }
     }
   }, [messages, trackingMessageId, showDiagnostics])
+
+  // Murphy Live WebSocket listener
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8002/events/${symbol}`)
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      // Event bus wraps messages as {"type": "event", "event": {actual_event}}
+      if (data.type === 'event' && data.event?.type === 'murphy_live') {
+        console.log('[Murphy Live] Received:', data.event)
+        setMurphyLive(data.event)
+      }
+    }
+
+    ws.onerror = (error) => {
+      console.error('[Murphy Live] WebSocket error:', error)
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [symbol])
 
   // Handle ESC key to abort LLM calls or close diagnostic modal
   useEffect(() => {
@@ -1287,6 +1338,36 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Murphy Live Ticker - Above Input Divider */}
+      {murphyLive && (
+        <div className="border-t border-[#55b68533] bg-black/20 font-mono flex">
+          {/* Left Column - Direction Signal */}
+          <div
+            className={`flex items-center justify-center px-6 py-4 text-lg font-bold ${
+              murphyLive.line1?.includes('BULLISH')
+                ? 'bg-green-600/80 text-white'
+                : murphyLive.line1?.includes('BEARISH')
+                ? 'bg-red-600/80 text-white'
+                : 'bg-transparent text-gray-400'
+            }`}
+            style={{ minWidth: '140px' }}
+          >
+            {murphyLive.line1?.includes('BULLISH')
+              ? '↑ BULLISH'
+              : murphyLive.line1?.includes('BEARISH')
+              ? '↓ BEARISH'
+              : '− NEUTRAL'}
+          </div>
+
+          {/* Right Column - Details */}
+          <div className="flex-1 px-4 py-3 text-sm space-y-1">
+            <div className="text-gray-200">{murphyLive.line1}</div>
+            <div className="text-gray-300">{murphyLive.line2}</div>
+            <div className="text-gray-400">{murphyLive.line3}</div>
+          </div>
+        </div>
+      )}
 
       {/* Input Box - Docked at Bottom */}
       <div className="p-4 border-t border-[#55b68533] relative">

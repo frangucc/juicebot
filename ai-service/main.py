@@ -294,6 +294,8 @@ async def chat(msg: ChatMessage):
     Returns:
         AI response
     """
+    print(f"[Chat] Received: '{msg.message}' for {msg.symbol}")
+
     # Check for slash commands
     if msg.message.startswith('/'):
         slash_response = await handle_slash_command(msg)
@@ -480,6 +482,7 @@ async def update_market_data(data: MarketDataUpdate):
     """
     if data.symbol not in classifiers:
         classifiers[data.symbol] = TradingClassifier()
+        print(f"[Market Data] Created new classifier for {data.symbol}")
 
     classifier = classifiers[data.symbol]
     classifier.update_market_data(data.symbol, {
@@ -490,6 +493,11 @@ async def update_market_data(data: MarketDataUpdate):
         'close': data.close,
         'volume': data.volume
     })
+
+    # Log bar count every 10 bars
+    bar_count = len(classifier.bar_history) if hasattr(classifier, 'bar_history') else 0
+    if bar_count % 10 == 0 and bar_count > 0:
+        print(f"[Market Data] {data.symbol} now has {bar_count} bars in history")
 
     return {"status": "ok", "symbol": data.symbol, "price": data.close}
 

@@ -7,13 +7,27 @@ const AI_SERVICE_URL = 'http://localhost:8002'
 const HISTORICAL_WS_URL = 'ws://localhost:8001'
 
 // Call Murphy classifier for BoS/CHoCH signals
-async function getMurphyClassification(symbol: string, structurePrice: number, signalType: string) {
+async function getMurphyClassification(
+  bars: any[],
+  structurePrice: number,
+  signalType: string
+) {
   try {
+    // Convert chart bars to API format
+    const barsData = bars.map(bar => ({
+      timestamp: new Date(bar.time * 1000).toISOString(),
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume || 0
+    }))
+
     const response = await fetch(`${API_URL}/murphy/classify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        symbol,
+        bars: barsData,
         structure_price: structurePrice,
         signal_type: signalType,
       })
@@ -715,7 +729,9 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                             highestBrokenSwing = swing.price
 
                             // Get Murphy classification and update label
-                            getMurphyClassification(symbol, swing.price, 'bos_bullish').then(murphy => {
+                            console.log(`🔍 Calling Murphy for BoS @ $${swing.price.toFixed(4)} with ${newData.length} bars`)
+                            getMurphyClassification(newData, swing.price, 'bos_bullish').then(murphy => {
+                              console.log('✓ Murphy response:', murphy)
                               if (murphy && candlestickSeriesRef.current) {
                                 // Remove old line
                                 candlestickSeriesRef.current.removePriceLine(bosLine)
@@ -756,7 +772,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                             chochLinesRef.current.push(chochData)
 
                             // Get Murphy classification for CHoCH
-                            getMurphyClassification(symbol, swing.price, 'choch_bullish').then(murphy => {
+                            getMurphyClassification(newData, swing.price, 'choch_bullish').then(murphy => {
                               if (murphy && candlestickSeriesRef.current) {
                                 candlestickSeriesRef.current.removePriceLine(chochLine)
 
@@ -811,7 +827,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                             lowestBrokenSwing = swing.price
 
                             // Get Murphy classification
-                            getMurphyClassification(symbol, swing.price, 'bos_bearish').then(murphy => {
+                            getMurphyClassification(newData, swing.price, 'bos_bearish').then(murphy => {
                               if (murphy && candlestickSeriesRef.current) {
                                 candlestickSeriesRef.current.removePriceLine(bosLine)
 
@@ -848,7 +864,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                             chochLinesRef.current.push(chochData)
 
                             // Get Murphy classification
-                            getMurphyClassification(symbol, swing.price, 'choch_bearish').then(murphy => {
+                            getMurphyClassification(newData, swing.price, 'choch_bearish').then(murphy => {
                               if (murphy && candlestickSeriesRef.current) {
                                 candlestickSeriesRef.current.removePriceLine(chochLine)
 
