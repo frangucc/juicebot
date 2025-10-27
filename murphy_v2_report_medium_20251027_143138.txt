@@ -1,0 +1,55 @@
+====================================================================================================
+MURPHY REGRESSION TEST V2 - BALANCED RISK MODE
+====================================================================================================
+Generated: 2025-10-27 14:31:38
+Dataset: BYND - 5352 bars (2025-10-17T03:02:00+00:00 to 2025-10-24T18:59:00+00:00)
+Risk Mode: MEDIUM (Balanced)
+
+RISK CONFIGURATION
+----------------------------------------------------------------------------------------------------
+Minimum signal tier:     1
+Position size base:      10.0% of capital
+Stop loss:               2.0%
+Scale in schedule:       [0.4, 0.3, 0.3]
+Scale out targets:       [0.25, 0.25, 0.25, 0.25]
+Allow weak reversals:    No
+Max bars in trade:       50
+
+SIGNAL SUMMARY
+----------------------------------------------------------------------------------------------------
+Total signals generated: 5332
+  Tier 1 (Premium ):  349 signals,  47.9% accurate,  264 traded
+  Tier 2 (Strong  ): 1326 signals,  43.6% accurate,    0 traded
+  Tier 3 (Standard): 1844 signals,  42.4% accurate,    0 traded
+  Tier 4 (Skip    ): 1813 signals,  21.5% accurate,    0 traded
+
+V2 FEATURE ACCURACY (@ 20 bars)
+----------------------------------------------------------------------------------------------------
+rejection   :  185 signals,  48.6% accurate
+pattern     :  426 signals,  44.1% accurate
+liq_sweep   : 1650 signals,  40.5% accurate
+any_v2      : 2070 signals,  41.9% accurate
+
+MULTI-TIMEFRAME ACCURACY
+----------------------------------------------------------------------------------------------------
+5bars   :  33.4% (1779/5327) | Traded:  45.5%
+10bars  :  35.9% (1911/5322) | Traded:  49.6%
+20bars  :  36.0% (1911/5312) | Traded:  48.5%
+50bars  :  35.5% (1873/5282) | Traded:  45.8%
+
+TRADING SIMULATION PERFORMANCE
+----------------------------------------------------------------------------------------------------
+Total trades:        264
+Win rate:            25.8% (68W / 196L)
+
+Total P&L:           $-4,119.16 (-4.12%)
+Starting capital:    $100,000.00
+Ending capital:      $95,880.84
+
+Avg win:             $204.26
+Avg loss:            $-91.88
+Profit factor:       0.77
+
+Max drawdown:        5.62%
+
+====================================================================================================

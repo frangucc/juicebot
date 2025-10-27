@@ -77,6 +77,39 @@ class MurphyClassifierV2:
         self.threshold_1_star = threshold_1_star
         self.neutral_threshold = neutral_threshold
 
+    # === Prior Level Detection ===
+
+    def find_prior_levels(self, bars: List[Bar], current_index: int, lookback: int = 50) -> List[float]:
+        """
+        Find swing highs and lows as prior support/resistance levels.
+
+        A swing high = bar higher than 2 bars on each side
+        A swing low = bar lower than 2 bars on each side
+
+        These are the "important old prices" that V2 features need.
+        """
+        levels = []
+        start_idx = max(2, current_index - lookback)
+        end_idx = min(current_index - 2, len(bars) - 3)  # Need 2 bars after for confirmation
+
+        for i in range(start_idx, end_idx):
+            if i < 2 or i >= len(bars) - 2:
+                continue
+
+            bar = bars[i]
+
+            # Swing high: higher than 2 bars on each side
+            if (bar.high > bars[i-1].high and bar.high > bars[i-2].high and
+                bar.high > bars[i+1].high and bar.high > bars[i+2].high):
+                levels.append(bar.high)
+
+            # Swing low: lower than 2 bars on each side
+            if (bar.low < bars[i-1].low and bar.low < bars[i-2].low and
+                bar.low < bars[i+1].low and bar.low < bars[i+2].low):
+                levels.append(bar.low)
+
+        return levels
+
     # === FVG Detection ===
 
     def detect_fvgs(self, bars: List[Bar], lookback: int = 50) -> List[FVG]:
@@ -591,7 +624,20 @@ class MurphyClassifierV2:
         )
 
         bar = bars[signal_index]
-        level = level_price if level_price else bar.close
+
+        # Auto-detect nearest prior level if not provided
+        if level_price is None:
+            prior_levels = self.find_prior_levels(bars, signal_index, lookback=50)
+
+            if prior_levels:
+                # Find the nearest prior level to current price
+                current_price = bar.close
+                level = min(prior_levels, key=lambda l: abs(l - current_price))
+            else:
+                # Fallback: No prior levels found (early in data)
+                level = bar.close
+        else:
+            level = level_price
 
         # === RUN PHASE 1 ENHANCEMENTS ===
 

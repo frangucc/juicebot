@@ -136,6 +136,19 @@ class TradingClassifierV2:
                     matched_pattern="murphy"
                 )
 
+        # Check for Momo classifier command
+        if message.strip().lower().startswith('momo'):
+            # Check if it's "momo live" to start background ticker
+            if 'live' in message.strip().lower():
+                return await self._start_momo_live(symbol)
+
+            momo_result = await self._execute_momo(message, symbol)
+            if momo_result:
+                return FastResponse(
+                    text=momo_result,
+                    matched_pattern="momo"
+                )
+
         # Try to execute via trade command executor
         result = await self.executor.execute(message, symbol)
 
@@ -161,7 +174,14 @@ class TradingClassifierV2:
         asyncio.create_task(self._murphy_live_worker(symbol))
 
         return FastResponse(
-            text=f"✓ Murphy Live started for {symbol}\nUpdating every second...\nType 'murphy stop' to end.",
+            text=(
+                f"✓ Murphy Live started for {symbol}\n\n"
+                f"📊 Analyzing bar data every second...\n"
+                f"🧪 Test session auto-created (click flask icon to view)\n\n"
+                f"⏱️  Note: Murphy needs ~20 bars to warm up before producing signals.\n"
+                f"Signals will appear in the widget above the chart when ready.\n\n"
+                f"Type 'murphy stop' to end."
+            ),
             matched_pattern="murphy_live"
         )
 
@@ -177,6 +197,40 @@ class TradingClassifierV2:
         last_direction = None  # Track last direction (BULLISH/BEARISH/NEUTRAL)
         last_grade = 0  # Track last grade
         last_stars = 0  # Track last stars
+
+        # Auto-start test recording (optional, fails gracefully)
+        test_session_id = None
+        test_recorder = None
+        heat_tracker = None
+        last_signal_id = None  # Track active signal for closing when direction changes
+
+        try:
+            from murphy_test_recorder import murphy_recorder
+            if murphy_recorder is not None:
+                # Check for existing active session or create new one
+                existing_session = murphy_recorder.get_active_session(symbol)
+                if existing_session:
+                    test_session_id = existing_session.id
+                    print(f"[Murphy Live] Using existing test session {test_session_id[:8]}...")
+                else:
+                    # Auto-create session
+                    session = murphy_recorder.create_session(
+                        symbol=symbol,
+                        notes=f"Auto-started with Murphy Live at {asyncio.get_event_loop().time()}"
+                    )
+                    test_session_id = session.id
+                    print(f"[Murphy Live] Auto-created test session {test_session_id[:8]}...")
+                test_recorder = murphy_recorder
+
+                # Load heat tracker for closing signals
+                try:
+                    from murphy_heat_tracker import heat_tracker as ht
+                    heat_tracker = ht
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[Murphy Live] Test recording disabled: {e}")
+            test_recorder = None
 
         try:
             while True:
@@ -266,6 +320,39 @@ class TradingClassifierV2:
                             reason = f"direction flip {last_direction}→{direction_text} with conviction"
                         else:
                             reason = f"direction flip rejected: not strong enough ({stars_display} [{signal.grade}])"
+
+                    # Record signal to test session (if enabled)
+                    if test_recorder and test_session_id:
+                        try:
+                            # Close previous signal if direction changed
+                            if last_signal_id and last_direction and direction_text != last_direction:
+                                if heat_tracker:
+                                    try:
+                                        await heat_tracker.close_signal(
+                                            signal_id=last_signal_id,
+                                            exit_price=data['price'],
+                                            new_direction=direction_text
+                                        )
+                                    except Exception as e:
+                                        print(f"[Murphy Test] Close signal error: {e}")
+
+                            # Record new signal
+                            signal_id = test_recorder.record_signal(
+                                session_id=test_session_id,
+                                symbol=symbol,
+                                signal=signal,
+                                price=data['price'],
+                                bar_count=len(self.bar_history),  # Track bar count
+                                passed_filter=should_publish,
+                                filter_reason=None if should_publish else reason
+                            )
+
+                            # Track this signal ID for closing later
+                            if should_publish:
+                                last_signal_id = signal_id
+
+                        except Exception as e:
+                            print(f"[Murphy Test] Recording error: {e}")
 
                     if should_publish:
                         # Create 3-line update
@@ -380,6 +467,241 @@ class TradingClassifierV2:
             error_detail = traceback.format_exc()
             print(f"[Murphy] ERROR: {error_detail}")
             return f"❌ Error running Murphy: {str(e)}"
+
+    async def _start_momo_live(self, symbol: str) -> FastResponse:
+        """Start live Momo momentum ticker - updates every second via event bus."""
+        import asyncio
+        from event_bus import event_bus
+
+        # Start background task
+        asyncio.create_task(self._momo_live_worker(symbol))
+
+        return FastResponse(
+            text=(
+                f"✓ Momo Live started for {symbol}\n\n"
+                f"🚀 Analyzing momentum across 7 timeframes every second...\n\n"
+                f"⏱️  Note: Momo needs ~50 bars to warm up before producing signals.\n"
+                f"Signals will appear in the purple widget above the chart when ready.\n\n"
+                f"Features:\n"
+                f"  • Multi-timeframe alignment (YEST/PRE/OPEN/1H/15M/5M/1M)\n"
+                f"  • VWAP positioning (value zones)\n"
+                f"  • Leg detection (wave analysis)\n"
+                f"  • Time-of-day patterns\n\n"
+                f"Type 'momo stop' to end."
+            ),
+            matched_pattern="momo_live"
+        )
+
+    async def _momo_live_worker(self, symbol: str):
+        """Background worker that publishes Momo momentum updates every second."""
+        import asyncio
+        from event_bus import event_bus
+
+        print(f"[Momo Live] Started for {symbol}")
+
+        # State tracking for signal persistence
+        last_published_signal = None
+        last_action = None
+        last_stars = 0
+
+        try:
+            while True:
+                # Get current market data
+                data = self.executor.market_data.get(symbol)
+                if not data:
+                    await asyncio.sleep(1)
+                    continue
+
+                bar_count = len(self.bar_history) if self.bar_history else 0
+
+                # Need at least 50 bars for Momo
+                if bar_count < 50:
+                    await asyncio.sleep(1)
+                    continue
+
+                try:
+                    # Import Momo Advanced
+                    import sys
+                    import os
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+                    from momo_advanced import MomoAdvanced
+                    from murphy_classifier_v2 import Bar
+
+                    # Convert bars to Bar objects
+                    bars = []
+                    for idx, bar_data in enumerate(self.bar_history[-100:]):
+                        bars.append(Bar(
+                            timestamp=bar_data.get('timestamp', ''),
+                            open=bar_data.get('open', 0),
+                            high=bar_data.get('high', 0),
+                            low=bar_data.get('low', 0),
+                            close=bar_data.get('close', 0),
+                            volume=int(bar_data.get('volume', 0)),
+                            index=idx
+                        ))
+
+                    # Get yesterday's close (use first bar as proxy if not available)
+                    yesterday_close = bars[0].close if bars else None
+
+                    # Run Momo classification
+                    momo = MomoAdvanced()
+                    signal = momo.classify(
+                        bars=bars,
+                        signal_index=len(bars) - 1,
+                        yesterday_close=yesterday_close
+                    )
+
+                    # Determine if we should publish (signal changed)
+                    direction_text = "BULLISH" if signal.direction == "↑" else "BEARISH" if signal.direction == "↓" else "NEUTRAL"
+                    action = signal.action
+                    stars = signal.stars
+
+                    should_publish = False
+                    reason = ""
+
+                    # Publish if action changed
+                    if action != last_action:
+                        should_publish = True
+                        reason = f"Action changed: {last_action} → {action}"
+
+                    # Publish if stars changed
+                    elif stars != last_stars:
+                        should_publish = True
+                        reason = f"Stars changed: {last_stars} → {stars}"
+
+                    # Publish if no signal published yet
+                    elif last_published_signal is None:
+                        should_publish = True
+                        reason = "Initial signal"
+
+                    if should_publish:
+                        # Format line1: Direction + Action
+                        arrow = signal.direction
+                        line1 = f"{arrow} {direction_text} | {action}"
+
+                        # Format line2: Stars + Confidence + Price
+                        stars_str = "★" * signal.stars
+                        conf_pct = int(signal.confidence * 100)
+                        line2 = f"Stars: {stars_str} ({signal.stars}/7) | Confidence: {conf_pct}% | Price: ${data['price']:.2f}"
+
+                        # Format line3: VWAP + Leg + Time
+                        vwap_zone = signal.vwap_context.zone
+                        vwap_dist = signal.vwap_context.distance_pct
+                        current_leg = signal.leg_context.current_leg
+                        next_leg = current_leg + 1
+                        next_leg_prob = int(signal.leg_context.next_leg_probability * 100)
+                        time_period = signal.time_period.period
+
+                        line3 = f"VWAP: {vwap_zone} ({vwap_dist:+.1f}%) | Leg: {current_leg} → {next_leg} ({next_leg_prob}%) | Time: {time_period}"
+
+                        # Create 3-line update
+                        momo_update = {
+                            'type': 'momo_live',
+                            'symbol': symbol,
+                            'line1': line1,
+                            'line2': line2,
+                            'line3': line3
+                        }
+
+                        # Update state tracking
+                        last_action = action
+                        last_stars = stars
+                        last_published_signal = momo_update
+
+                        print(f"[Momo Live] ✓ Publishing: {line1[:60]}... | {reason}")
+                        await event_bus.publish(symbol, momo_update)
+                    else:
+                        print(f"[Momo Live] ✗ SKIP: No significant change")
+
+                except Exception as e:
+                    print(f"[Momo Live] Error: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+                await asyncio.sleep(1)
+
+        except asyncio.CancelledError:
+            print(f"[Momo Live] Stopped for {symbol}")
+
+    async def _execute_momo(self, message: str, symbol: str) -> Optional[str]:
+        """Execute Momo momentum classifier command - DIRECT EXECUTION."""
+        # Get market data for current price
+        data = self.executor.market_data.get(symbol)
+        if not data:
+            return f"⚠️ No market data available for {symbol}"
+
+        # Prepare bar data from history
+        bar_count = len(self.bar_history) if self.bar_history else 0
+        print(f"[Momo] Analyzing {bar_count} bars for {symbol} @ ${data['price']:.2f}")
+
+        if not self.bar_history or len(self.bar_history) < 50:
+            return f"⚠️ Insufficient bar data for Momo analysis (need at least 50 bars, have {bar_count})"
+
+        try:
+            # Import Momo Advanced
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+            from momo_advanced import MomoAdvanced
+            from murphy_classifier_v2 import Bar
+
+            # Convert bars to Bar objects
+            bars = []
+            for idx, bar_data in enumerate(self.bar_history[-100:]):
+                bars.append(Bar(
+                    timestamp=bar_data.get('timestamp', ''),
+                    open=bar_data.get('open', 0),
+                    high=bar_data.get('high', 0),
+                    low=bar_data.get('low', 0),
+                    close=bar_data.get('close', 0),
+                    volume=int(bar_data.get('volume', 0)),
+                    index=idx
+                ))
+
+            # Get yesterday's close
+            yesterday_close = bars[0].close if bars else None
+
+            # Run Momo classification
+            print(f"[Momo] Running classification on {len(bars)} bars...")
+            momo = MomoAdvanced()
+
+            signal = momo.classify(
+                bars=bars,
+                signal_index=len(bars) - 1,
+                yesterday_close=yesterday_close
+            )
+
+            # Format result
+            stars_str = "★" * signal.stars
+            conf_pct = int(signal.confidence * 100)
+
+            result = (
+                f"🚀 Momo Analysis - {symbol} @ ${data['price']:.2f}\n\n"
+                f"Direction: {signal.direction}\n"
+                f"Stars: {stars_str} ({signal.stars}/7 alignment)\n"
+                f"Confidence: {conf_pct}%\n"
+                f"Action: {signal.action}\n\n"
+                f"📊 VWAP Context:\n"
+                f"  Zone: {signal.vwap_context.zone}\n"
+                f"  Distance: {signal.vwap_context.distance_pct:+.1f}% from VWAP\n"
+                f"  VWAP Price: ${signal.vwap:.2f}\n\n"
+                f"🌊 Leg Analysis:\n"
+                f"  Current Leg: {signal.leg_context.current_leg}\n"
+                f"  Next Leg Probability: {signal.leg_context.next_leg_probability*100:.0f}%\n"
+                f"  In Pullback Zone: {'Yes' if signal.leg_context.in_pullback_zone else 'No'}\n\n"
+                f"⏰ Time Context:\n"
+                f"  Period: {signal.time_period.period}\n"
+                f"  Bias: {signal.time_period.bias}\n\n"
+                f"💡 {signal.reason}"
+            )
+
+            return result
+
+        except Exception as e:
+            import traceback
+            error_detail = traceback.format_exc()
+            print(f"[Momo] ERROR: {error_detail}")
+            return f"❌ Error running Momo: {str(e)}"
 
     def get_context(self, symbol: str) -> str:
         """

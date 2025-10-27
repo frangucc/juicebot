@@ -23,18 +23,20 @@ import asyncio
 from shared.database import supabase
 from shared.config import settings
 
-# Import Murphy classifier
+# Import Murphy classifier and Momo Advanced
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from murphy_classifier_v2 import MurphyClassifier, Bar
+from momo_advanced import MomoAdvanced
 
 # Cache for leaderboard data (30 second TTL)
 _leaderboard_cache = {}
 _cache_ttl = 30
 
-# Initialize Murphy classifier (singleton)
+# Initialize classifiers (singletons)
 murphy_classifier = MurphyClassifier()
+momo_classifier = MomoAdvanced()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -103,6 +105,42 @@ class MurphyClassifyResponse(BaseModel):
     rejection_type: Optional[str] = None
     pattern: Optional[str] = None
     fvg_momentum: Optional[str] = None
+
+
+class MomoClassifyRequest(BaseModel):
+    """Request model for Momo momentum classification."""
+    bars: List[BarData]  # Bars from chart (in chronological order)
+    yesterday_close: Optional[float] = None
+
+
+class MomoClassifyResponse(BaseModel):
+    """Response model for Momo momentum classification."""
+    direction: str  # '↑', '↓', or '−'
+    stars: int  # 5-7 (multi-timeframe alignment count)
+    confidence: float  # 0-100%
+    action: str  # STRONG_BUY, BUY, WAIT, SELL, STRONG_SELL
+    juice_score: float  # Overall momentum strength
+    label: str  # Formatted label like '↑ ★★★★★★★ [85%] STRONG_BUY'
+
+    # VWAP context
+    vwap_zone: str  # DEEP_VALUE, VALUE, FAIR, EXTENDED, EXTREME
+    vwap_distance_pct: float
+    vwap_price: float
+
+    # Leg context
+    current_leg: int
+    next_leg_probability: float
+    in_pullback_zone: bool
+
+    # Shadow trading
+    shadow_signal: str  # STRONG_BUY, BUY, NEUTRAL, SELL
+    shadow_confidence: float
+
+    # Time context
+    time_period: str  # premarket_early, morning_run, lunch_chop, etc.
+    time_bias: str  # bullish, bearish, neutral
+
+    interpretation: str
 
 
 # Routes
@@ -600,6 +638,43 @@ async def get_latest_price(symbol: str):
         raise HTTPException(status_code=500, detail=f"Failed to fetch latest price: {str(e)}")
 
 
+@app.get("/symbols/{symbol}/realtime-price")
+async def get_realtime_price(symbol: str):
+    """
+    Get real-time price directly from symbol_state (updated every 2s by screener).
+    This is faster than latest-price which checks price_bars first (60s bars).
+
+    Returns:
+        Real-time price data from live screener
+    """
+    try:
+        response = (
+            supabase.table("symbol_state")
+            .select("*")
+            .eq("symbol", symbol.upper())
+            .limit(1)
+            .execute()
+        )
+
+        if response.data:
+            data = response.data[0]
+            return {
+                "symbol": symbol.upper(),
+                "price": data["current_price"],
+                "timestamp": data["last_updated"],
+                "pct_from_yesterday": data.get("pct_from_yesterday"),
+                "pct_from_open": data.get("pct_from_open"),
+                "source": "symbol_state"
+            }
+        else:
+            raise HTTPException(status_code=404, detail=f"No real-time data found for {symbol}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch real-time price: {str(e)}")
+
+
 @app.get("/discord/juice-boxes")
 async def get_discord_juice_boxes():
     """
@@ -757,6 +832,285 @@ async def classify_with_murphy(request: MurphyClassifyRequest):
             status_code=500,
             detail=f"Murphy classification failed: {str(e)}"
         )
+
+
+@app.post("/momo/classify", response_model=MomoClassifyResponse)
+async def classify_with_momo(request: MomoClassifyRequest):
+    """
+    Classify momentum using Momo Advanced multi-timeframe classifier.
+
+    Args:
+        request: Momo classification request with bars and optional yesterday_close
+
+    Returns:
+        Momo's analysis with direction, stars (5-7), confidence, VWAP context, legs, etc.
+    """
+    try:
+        # Use bars provided by chart (already in chronological order)
+        if not request.bars or len(request.bars) < 50:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient bar data (need at least 50 bars, got {len(request.bars)})"
+            )
+
+        # Convert to Bar objects
+        bars = []
+        for idx, bar_data in enumerate(request.bars):
+            bars.append(Bar(
+                timestamp=bar_data.timestamp,
+                open=bar_data.open,
+                high=bar_data.high,
+                low=bar_data.low,
+                close=bar_data.close,
+                volume=int(bar_data.volume),
+                index=idx
+            ))
+
+        # Classify at most recent bar
+        current_index = len(bars) - 1
+
+        # Run Momo classification
+        print(f"[Momo API] Classifying {len(bars)} bars with yesterday_close={request.yesterday_close}")
+
+        try:
+            momo_signal = momo_classifier.classify(
+                bars=bars,
+                signal_index=current_index,
+                yesterday_close=request.yesterday_close
+            )
+            print(f"[Momo API] Classification complete: {momo_signal.direction} {momo_signal.stars}/7 stars, {momo_signal.action}")
+        except Exception as classify_error:
+            print(f"[Momo API] Classification error: {str(classify_error)}")
+            raise
+
+        # Format the label
+        stars_str = '★' * momo_signal.stars
+        conf_pct = int(momo_signal.confidence * 100)
+        label = f"{momo_signal.direction} {stars_str} [{conf_pct}%] {momo_signal.action}"
+
+        # Build interpretation
+        interpretation_parts = []
+
+        # Overall momentum
+        if momo_signal.stars >= 7:
+            interpretation_parts.append(f"MAX JUICE! All 7 timeframes aligned {momo_signal.direction}")
+        elif momo_signal.stars >= 6:
+            interpretation_parts.append(f"Strong momentum with {momo_signal.stars}/7 timeframes aligned")
+        else:
+            interpretation_parts.append(f"Moderate momentum with {momo_signal.stars}/7 timeframes aligned")
+
+        # VWAP context
+        if momo_signal.vwap_context.zone == 'DEEP_VALUE':
+            interpretation_parts.append(f"Deep value zone ({momo_signal.vwap_context.distance_pct:.1f}% below VWAP) - excellent entry")
+        elif momo_signal.vwap_context.zone == 'VALUE':
+            interpretation_parts.append(f"Value zone ({momo_signal.vwap_context.distance_pct:.1f}% below VWAP) - buying value")
+        elif momo_signal.vwap_context.zone == 'EXTENDED':
+            interpretation_parts.append(f"Extended ({momo_signal.vwap_context.distance_pct:.1f}% above VWAP) - caution")
+        elif momo_signal.vwap_context.zone == 'EXTREME':
+            interpretation_parts.append(f"Extreme extension ({momo_signal.vwap_context.distance_pct:.1f}% from VWAP) - avoid entry")
+
+        # Leg context
+        if momo_signal.leg_context.in_pullback_zone:
+            interpretation_parts.append(f"In pullback zone after leg {momo_signal.leg_context.current_leg} - prime for continuation ({momo_signal.leg_context.next_leg_probability:.0%} probability)")
+        else:
+            interpretation_parts.append(f"Leg {momo_signal.leg_context.current_leg}, next leg probability: {momo_signal.leg_context.next_leg_probability:.0%}")
+
+        # Time context
+        if momo_signal.time_period.bias == 'bullish':
+            interpretation_parts.append(f"{momo_signal.time_period.period} - favorable time window")
+        elif momo_signal.time_period.bias == 'bearish':
+            interpretation_parts.append(f"{momo_signal.time_period.period} - caution on timing")
+
+        interpretation = ". ".join(interpretation_parts) + "."
+
+        return MomoClassifyResponse(
+            direction=momo_signal.direction,
+            stars=momo_signal.stars,
+            confidence=momo_signal.confidence * 100,  # Convert to percentage
+            action=momo_signal.action,
+            juice_score=momo_signal.juice_score,
+            label=label,
+            vwap_zone=momo_signal.vwap_context.zone,
+            vwap_distance_pct=momo_signal.vwap_context.distance_pct,
+            vwap_price=momo_signal.vwap,
+            current_leg=momo_signal.leg_context.current_leg,
+            next_leg_probability=momo_signal.leg_context.next_leg_probability * 100,  # Convert to percentage
+            in_pullback_zone=momo_signal.leg_context.in_pullback_zone,
+            shadow_signal=momo_signal.shadow_signal.get('signal', 'NEUTRAL'),
+            shadow_confidence=momo_signal.shadow_signal.get('confidence', 0) * 100,  # Convert to percentage
+            time_period=momo_signal.time_period.period,
+            time_bias=momo_signal.time_period.bias,
+            interpretation=interpretation
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Momo classification failed: {str(e)}"
+        )
+
+
+# ===== MURPHY TEST & RECORDING ENDPOINTS =====
+
+# Pydantic models for request/response
+class CreateTestSessionRequest(BaseModel):
+    symbol: str
+    config: Optional[dict] = None
+    notes: Optional[str] = None
+
+class EndTestSessionRequest(BaseModel):
+    status: str = 'completed'  # 'completed' or 'cancelled'
+
+
+@app.post("/murphy-test/sessions")
+async def create_test_session(request: CreateTestSessionRequest):
+    """Create a new Murphy test session."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        if murphy_recorder is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Murphy test recorder not available. Check Supabase connection and environment variables."
+            )
+
+        session = murphy_recorder.create_session(
+            symbol=request.symbol,
+            config=request.config,
+            notes=request.notes
+        )
+
+        return {
+            "success": True,
+            "session": {
+                "id": session.id,
+                "symbol": session.symbol,
+                "started_at": session.started_at.isoformat(),
+                "status": session.status,
+                "config": session.config,
+                "metrics": session.metrics
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
+
+
+@app.get("/murphy-test/sessions/{symbol}/active")
+async def get_active_test_session(symbol: str):
+    """Get active test session for a symbol."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        if murphy_recorder is None:
+            return {"success": True, "session": None, "message": "Test recorder not available"}
+
+        session = murphy_recorder.get_active_session(symbol)
+
+        if not session:
+            return {"success": True, "session": None}
+
+        return {
+            "success": True,
+            "session": {
+                "id": session.id,
+                "symbol": session.symbol,
+                "started_at": session.started_at.isoformat(),
+                "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+                "status": session.status,
+                "config": session.config,
+                "metrics": session.metrics,
+                "notes": session.notes
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get session: {str(e)}")
+
+
+@app.get("/murphy-test/sessions/{session_id}")
+async def get_test_session(session_id: str):
+    """Get test session by ID."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        session = murphy_recorder.get_session(session_id)
+
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        return {
+            "success": True,
+            "session": {
+                "id": session.id,
+                "symbol": session.symbol,
+                "started_at": session.started_at.isoformat(),
+                "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+                "status": session.status,
+                "config": session.config,
+                "metrics": session.metrics,
+                "notes": session.notes
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get session: {str(e)}")
+
+
+@app.post("/murphy-test/sessions/{session_id}/end")
+async def end_test_session(session_id: str, request: EndTestSessionRequest):
+    """End a test session."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        murphy_recorder.end_session(session_id, request.status)
+
+        return {"success": True, "message": f"Session ended with status: {request.status}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to end session: {str(e)}")
+
+
+@app.get("/murphy-test/sessions/{session_id}/signals")
+async def get_test_session_signals(
+    session_id: str,
+    limit: int = 100,
+    passed_filter: Optional[bool] = None
+):
+    """Get signals for a test session."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        signals = murphy_recorder.get_session_signals(
+            session_id=session_id,
+            limit=limit,
+            passed_filter=passed_filter
+        )
+
+        return {
+            "success": True,
+            "signals": signals,
+            "count": len(signals)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get signals: {str(e)}")
+
+
+@app.get("/murphy-test/sessions")
+async def get_recent_test_sessions(symbol: Optional[str] = None, limit: int = 10):
+    """Get recent test sessions."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        sessions = murphy_recorder.get_recent_sessions(symbol=symbol, limit=limit)
+
+        return {
+            "success": True,
+            "sessions": sessions,
+            "count": len(sessions)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get sessions: {str(e)}")
 
 
 @app.websocket("/ws/prices")

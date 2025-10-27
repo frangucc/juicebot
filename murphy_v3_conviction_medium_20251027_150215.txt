@@ -1,0 +1,322 @@
+====================================================================================================
+MURPHY CONVICTION TRADING TEST V3
+====================================================================================================
+Generated: 2025-10-27 15:02:15
+Risk Mode: MEDIUM CONVICTION
+Allocated Capital: $100,000.00
+Focus Date: 2025-10-20
+
+Dataset: 5352 bars (2025-10-17T03:02:00+00:00 to 2025-10-24T18:59:00+00:00)
+
+----------------------------------------------------------------------------------------------------
+CONVICTION RISK CONFIGURATION
+----------------------------------------------------------------------------------------------------
+Description:             Moderate conviction, balanced approach
+Initial entry:           30% of allocated capital
+Max position:            100% of allocated capital
+Dip buying:              SELECTIVE
+Profit taking:           BALANCED
+Hold through chop:       No
+Min signal tier:         2
+Dip threshold:           3%-10%
+Stop losses:             NONE (conviction mode)
+
+----------------------------------------------------------------------------------------------------
+SESSION METRICS
+----------------------------------------------------------------------------------------------------
+Open:                    $0.90
+Close:                   $1.68
+High:                    $1.78
+Low:                     $0.87
+Range:                   0.91 (104.83%)
+Move (open to close):    +86.85%
+
+----------------------------------------------------------------------------------------------------
+MURPHY SIGNAL SUMMARY
+----------------------------------------------------------------------------------------------------
+Total signals:           5352
+  Tier 1 (Premium):      60
+  Tier 2 (Strong):       222
+  Tier 3 (Standard):     624
+  Tier 4 (Skip):         4446
+
+----------------------------------------------------------------------------------------------------
+CONVICTION TRADING PERFORMANCE
+----------------------------------------------------------------------------------------------------
+Total trades:            5
+
+Total P&L:               $-4,708.52 (-4.71%)
+Avg P&L per trade:       $-941.70 (-0.94%)
+Avg bars held:           869.6
+Avg entries per trade:   8.2
+Avg max position:        44.0% of allocated
+
+CONVICTION EFFICIENCY METRICS:
+Avg entry efficiency:    -120.43% vs session open
+Avg exit efficiency:     +17.29% vs session close
+Avg move captured:       -1.3% of session range
+
+----------------------------------------------------------------------------------------------------
+TRADE DETAILS
+----------------------------------------------------------------------------------------------------
+
+Trade #1:
+  Entry bar: 737 (2025-10-20T03:01:00+00:00)
+  Exit bar:  5085 (2025-10-24T13:53:00+00:00)
+  Bars held: 4348
+  
+  Entries (37):
+    Bar 737: 24390 shares @ $1.23
+    Bar 767: 15217 shares @ $1.15
+    Bar 768: 11218 shares @ $1.17
+    Bar 772: 8559 shares @ $1.15
+    Bar 907: 6476 shares @ $1.14
+    Bar 908: 3691 shares @ $1.20
+    Bar 1160: 3869 shares @ $1.15
+    Bar 1322: 1808 shares @ $1.47
+    Bar 1324: 1446 shares @ $1.47
+    Bar 1327: 1157 shares @ $1.47
+    Bar 1340: 1206 shares @ $1.41
+    Bar 1344: 928 shares @ $1.38
+    Bar 1348: 676 shares @ $1.42
+    Bar 1448: 509 shares @ $1.41
+    Bar 1449: 289 shares @ $1.49
+    Bar 1701: 223 shares @ $1.93
+    Bar 1706: 170 shares @ $1.90
+    Bar 1712: 129 shares @ $1.87
+    Bar 1728: 75 shares @ $1.94
+    Bar 1731: 77 shares @ $1.90
+    Bar 1746: 57 shares @ $1.91
+    Bar 1840: 43 shares @ $1.89
+    Bar 1847: 32 shares @ $1.91
+    Bar 1849: 24 shares @ $1.93
+    Bar 1954: 17 shares @ $2.04
+    Bar 1955: 12 shares @ $2.09
+    Bar 1958: 9 shares @ $2.10
+    Bar 1959: 7 shares @ $2.11
+    Bar 1982: 4 shares @ $2.38
+    Bar 1988: 3 shares @ $2.38
+    Bar 1989: 2 shares @ $2.41
+    Bar 1992: 2 shares @ $2.37
+    Bar 1995: 2 shares @ $2.35
+    Bar 1998: 1 shares @ $2.29
+    Bar 2100: 1 shares @ $2.29
+    Bar 2111: 1 shares @ $2.32
+    Bar 2113: 1 shares @ $2.29
+  
+  Exits (119):
+    Bar 738: 9756 shares @ $1.11 (strong_bearish_signal)
+    Bar 739: 5853 shares @ $1.07 (strong_bearish_signal)
+    Bar 741: 3512 shares @ $1.05 (strong_bearish_signal)
+    Bar 743: 2107 shares @ $1.01 (strong_bearish_signal)
+    Bar 744: 1264 shares @ $1.01 (strong_bearish_signal)
+    Bar 747: 759 shares @ $1.07 (strong_bearish_signal)
+    Bar 748: 455 shares @ $1.01 (strong_bearish_signal)
+    Bar 750: 273 shares @ $1.01 (strong_bearish_signal)
+    Bar 757: 205 shares @ $1.06 (volume_declining)
+    Bar 769: 13320 shares @ $1.19 (volume_declining)
+    Bar 770: 6660 shares @ $1.18 (volume_declining)
+    Bar 775: 7610 shares @ $1.10 (volume_declining)
+    Bar 776: 3805 shares @ $1.12 (volume_declining)
+    Bar 779: 1902 shares @ $1.08 (volume_declining)
+    Bar 780: 951 shares @ $1.09 (volume_declining)
+    Bar 787: 476 shares @ $1.10 (volume_declining)
+    Bar 791: 238 shares @ $1.13 (volume_declining)
+    Bar 794: 119 shares @ $1.12 (volume_declining)
+    Bar 799: 59 shares @ $1.11 (volume_declining)
+    Bar 800: 30 shares @ $1.11 (volume_declining)
+    Bar 809: 15 shares @ $1.10 (volume_declining)
+    Bar 822: 7 shares @ $1.04 (volume_declining)
+    Bar 832: 4 shares @ $0.98 (volume_declining)
+    Bar 856: 2 shares @ $1.02 (volume_declining)
+    Bar 857: 1 shares @ $1.02 (volume_declining)
+    Bar 918: 5084 shares @ $1.14 (volume_declining)
+    Bar 919: 2542 shares @ $1.13 (volume_declining)
+    Bar 920: 1271 shares @ $1.15 (volume_declining)
+    Bar 921: 635 shares @ $1.12 (volume_declining)
+    Bar 947: 318 shares @ $1.03 (volume_declining)
+    Bar 951: 159 shares @ $1.07 (volume_declining)
+    Bar 961: 79 shares @ $1.04 (volume_declining)
+    Bar 969: 40 shares @ $1.02 (volume_declining)
+    Bar 970: 20 shares @ $1.03 (volume_declining)
+    Bar 989: 10 shares @ $1.02 (volume_declining)
+    Bar 992: 5 shares @ $1.02 (volume_declining)
+    Bar 997: 2 shares @ $1.06 (volume_declining)
+    Bar 998: 1 shares @ $1.04 (volume_declining)
+    Bar 1007: 1 shares @ $1.03 (consolidating)
+    Bar 1162: 1935 shares @ $1.11 (volume_declining)
+    Bar 1167: 967 shares @ $1.10 (volume_declining)
+    Bar 1176: 484 shares @ $1.08 (volume_declining)
+    Bar 1179: 242 shares @ $1.07 (volume_declining)
+    Bar 1188: 121 shares @ $1.00 (volume_declining)
+    Bar 1198: 60 shares @ $1.04 (volume_declining)
+    Bar 1199: 30 shares @ $1.04 (volume_declining)
+    Bar 1203: 15 shares @ $1.07 (volume_declining)
+    Bar 1204: 8 shares @ $1.07 (volume_declining)
+    Bar 1205: 4 shares @ $1.07 (volume_declining)
+    Bar 1209: 2 shares @ $1.10 (volume_declining)
+    Bar 1215: 1 shares @ $1.13 (volume_declining)
+    Bar 1322: 904 shares @ $1.47 (volume_declining)
+    Bar 1323: 452 shares @ $1.47 (volume_declining)
+    Bar 1328: 1528 shares @ $1.46 (volume_declining)
+    Bar 1339: 611 shares @ $1.35 (strong_bearish_signal)
+    Bar 1341: 1061 shares @ $1.38 (volume_declining)
+    Bar 1344: 995 shares @ $1.38 (volume_declining)
+    Bar 1345: 497 shares @ $1.38 (volume_declining)
+    Bar 1350: 587 shares @ $1.41 (volume_declining)
+    Bar 1353: 293 shares @ $1.36 (volume_declining)
+    Bar 1357: 147 shares @ $1.33 (volume_declining)
+    Bar 1367: 73 shares @ $1.33 (volume_declining)
+    Bar 1375: 37 shares @ $1.38 (volume_declining)
+    Bar 1376: 18 shares @ $1.38 (volume_declining)
+    Bar 1381: 9 shares @ $1.34 (volume_declining)
+    Bar 1398: 5 shares @ $1.42 (volume_declining)
+    Bar 1404: 2 shares @ $1.38 (volume_declining)
+    Bar 1410: 1 shares @ $1.41 (volume_declining)
+    Bar 1413: 1 shares @ $1.36 (volume_declining)
+    Bar 1448: 255 shares @ $1.41 (volume_declining)
+    Bar 1458: 163 shares @ $1.58 (neutral_at_resistance)
+    Bar 1459: 114 shares @ $1.57 (neutral_at_resistance)
+    Bar 1460: 80 shares @ $1.57 (neutral_at_resistance)
+    Bar 1461: 56 shares @ $1.56 (neutral_at_resistance)
+    Bar 1462: 65 shares @ $1.53 (volume_declining)
+    Bar 1468: 33 shares @ $1.52 (volume_declining)
+    Bar 1472: 16 shares @ $1.53 (volume_declining)
+    Bar 1479: 8 shares @ $1.45 (volume_declining)
+    Bar 1480: 4 shares @ $1.47 (volume_declining)
+    Bar 1489: 2 shares @ $1.46 (volume_declining)
+    Bar 1492: 1 shares @ $1.47 (volume_declining)
+    Bar 1493: 1 shares @ $1.47 (volume_declining)
+    Bar 1711: 197 shares @ $1.86 (volume_declining)
+    Bar 1735: 239 shares @ $1.87 (volume_declining)
+    Bar 1751: 148 shares @ $1.92 (volume_declining)
+    Bar 1754: 74 shares @ $1.88 (volume_declining)
+    Bar 1755: 37 shares @ $1.91 (volume_declining)
+    Bar 1760: 18 shares @ $1.92 (volume_declining)
+    Bar 1761: 9 shares @ $1.92 (volume_declining)
+    Bar 1765: 5 shares @ $1.92 (volume_declining)
+    Bar 1768: 2 shares @ $1.88 (volume_declining)
+    Bar 1771: 1 shares @ $1.88 (volume_declining)
+    Bar 1772: 1 shares @ $1.88 (volume_declining)
+    Bar 1840: 22 shares @ $1.89 (volume_declining)
+    Bar 1844: 8 shares @ $1.92 (strong_bearish_signal)
+    Bar 1851: 35 shares @ $1.92 (volume_declining)
+    Bar 1852: 17 shares @ $1.93 (volume_declining)
+    Bar 1872: 9 shares @ $1.95 (volume_declining)
+    Bar 1878: 2 shares @ $2.00 (neutral_at_resistance)
+    Bar 1895: 3 shares @ $2.09 (volume_declining)
+    Bar 1905: 2 shares @ $2.08 (volume_declining)
+    Bar 1918: 1 shares @ $2.19 (volume_declining)
+    Bar 1957: 15 shares @ $2.06 (volume_declining)
+    Bar 1965: 15 shares @ $2.15 (volume_declining)
+    Bar 1966: 8 shares @ $2.17 (volume_declining)
+    Bar 1971: 3 shares @ $2.40 (strong_bearish_signal)
+    Bar 1972: 2 shares @ $2.36 (strong_bearish_signal)
+    Bar 1979: 1 shares @ $2.34 (strong_bearish_signal)
+    Bar 1985: 2 shares @ $2.15 (strong_bearish_signal)
+    Bar 1990: 3 shares @ $2.34 (strong_bearish_signal)
+    Bar 1994: 3 shares @ $2.28 (strong_bearish_signal)
+    Bar 1996: 3 shares @ $2.35 (volume_declining)
+    Bar 1997: 1 shares @ $2.23 (strong_bearish_signal)
+    Bar 1999: 2 shares @ $2.25 (volume_declining)
+    Bar 2005: 1 shares @ $2.12 (volume_declining)
+    Bar 2101: 1 shares @ $2.29 (volume_declining)
+    Bar 2114: 1 shares @ $2.29 (volume_declining)
+    Bar 2115: 1 shares @ $2.29 (volume_declining)
+    Bar 5085: 1 shares @ $2.40 (end_of_session)
+  
+  Avg entry:        $1.21
+  Avg exit:         $1.16
+  Total shares:     82331
+  Max position:     100.0% of allocated
+  P&L:              $-4,708.52 (-4.71%)
+  
+  Entry efficiency: -35.08% vs session open
+  Exit efficiency:  -31.11% vs session close
+  Move captured:    -6.3% of session range
+
+Trade #2:
+  Entry bar: 5142 (2025-10-24T14:50:00+00:00)
+  Exit bar:  5142 (2025-10-24T14:50:00+00:00)
+  Bars held: 0
+  
+  Entries (1):
+    Bar 5142: 14051 shares @ $2.13
+  
+  Exits (1):
+    Bar 5142: 14051 shares @ $2.13 (end_of_session)
+  
+  Avg entry:        $2.13
+  Avg exit:         $2.13
+  Total shares:     14051
+  Max position:     30.0% of allocated
+  P&L:              $0.00 (+0.00%)
+  
+  Entry efficiency: -137.46% vs session open
+  Exit efficiency:  +27.08% vs session close
+  Move captured:    0.0% of session range
+
+Trade #3:
+  Entry bar: 5149 (2025-10-24T14:57:00+00:00)
+  Exit bar:  5149 (2025-10-24T14:57:00+00:00)
+  Bars held: 0
+  
+  Entries (1):
+    Bar 5149: 14051 shares @ $2.13
+  
+  Exits (1):
+    Bar 5149: 14051 shares @ $2.13 (end_of_session)
+  
+  Avg entry:        $2.13
+  Avg exit:         $2.13
+  Total shares:     14051
+  Max position:     30.0% of allocated
+  P&L:              $0.00 (+0.00%)
+  
+  Entry efficiency: -137.46% vs session open
+  Exit efficiency:  +27.08% vs session close
+  Move captured:    0.0% of session range
+
+Trade #4:
+  Entry bar: 5151 (2025-10-24T14:59:00+00:00)
+  Exit bar:  5151 (2025-10-24T14:59:00+00:00)
+  Bars held: 0
+  
+  Entries (1):
+    Bar 5151: 13729 shares @ $2.19
+  
+  Exits (1):
+    Bar 5151: 13729 shares @ $2.19 (end_of_session)
+  
+  Avg entry:        $2.19
+  Avg exit:         $2.19
+  Total shares:     13729
+  Max position:     30.0% of allocated
+  P&L:              $0.00 (+0.00%)
+  
+  Entry efficiency: -143.02% vs session open
+  Exit efficiency:  +30.06% vs session close
+  Move captured:    0.0% of session range
+
+Trade #5:
+  Entry bar: 5152 (2025-10-24T15:00:00+00:00)
+  Exit bar:  5152 (2025-10-24T15:00:00+00:00)
+  Bars held: 0
+  
+  Entries (1):
+    Bar 5152: 13392 shares @ $2.24
+  
+  Exits (1):
+    Bar 5152: 13392 shares @ $2.24 (end_of_session)
+  
+  Avg entry:        $2.24
+  Avg exit:         $2.24
+  Total shares:     13392
+  Max position:     30.0% of allocated
+  P&L:              $0.00 (+0.00%)
+  
+  Entry efficiency: -149.14% vs session open
+  Exit efficiency:  +33.33% vs session close
+  Move captured:    0.0% of session range
+
+====================================================================================================

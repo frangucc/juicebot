@@ -45,6 +45,43 @@ async function getMurphyClassification(
   }
 }
 
+// Call Momo Advanced classifier for momentum analysis
+async function getMomoClassification(
+  bars: any[],
+  yesterdayClose?: number
+) {
+  try {
+    // Convert chart bars to API format
+    const barsData = bars.map(bar => ({
+      timestamp: new Date(bar.time * 1000).toISOString(),
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume || 0
+    }))
+
+    const response = await fetch(`${API_URL}/momo/classify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bars: barsData,
+        yesterday_close: yesterdayClose
+      })
+    })
+
+    if (!response.ok) {
+      console.error('Momo classification failed:', response.statusText)
+      return null
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Failed to get Momo classification:', error)
+    return null
+  }
+}
+
 // Send bar data to AI service for fast-path responses
 async function updateAIServiceMarketData(symbol: string, bar: BarData) {
   try {
@@ -380,9 +417,10 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
     console.log('Chart is ready, proceeding with data connection...')
 
     let intervalId: NodeJS.Timeout
+    let priceIntervalId: NodeJS.Timeout
 
     if (dataMode === 'live') {
-      // Live mode: Poll REST API
+      // Live mode: Poll REST API + real-time price updates
       const fetchLiveData = async () => {
         try {
           const response = await fetch(`${API_URL}/bars/${symbol}?limit=500`)
@@ -430,8 +468,44 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
         }
       }
 
+      // Fetch latest price and update current forming bar
+      const updateCurrentBar = async () => {
+        try {
+          // Use realtime-price endpoint for fastest updates (updated every 2s by screener)
+          const response = await fetch(`${API_URL}/symbols/${symbol}/realtime-price`)
+          if (!response.ok) return
+
+          const data = await response.json()
+          const latestPrice = data.price
+
+          if (candlestickSeriesRef.current) {
+            // Get current data
+            const currentData = candlestickSeriesRef.current.data() as any[]
+            if (currentData.length === 0) return
+
+            // Update the last bar with latest price
+            const lastBar = currentData[currentData.length - 1]
+            const updatedBar = {
+              ...lastBar,
+              close: latestPrice,
+              high: Math.max(lastBar.high, latestPrice),
+              low: Math.min(lastBar.low, latestPrice),
+            }
+
+            candlestickSeriesRef.current.update(updatedBar)
+
+            // Update price label
+            console.log(`[Price Update] ${symbol}: $${latestPrice.toFixed(2)}`)
+          }
+        } catch (err) {
+          // Silently fail for price updates
+          console.debug('Price update failed:', err)
+        }
+      }
+
       fetchLiveData()
-      intervalId = setInterval(fetchLiveData, 5000)
+      intervalId = setInterval(fetchLiveData, 15000) // Full refresh every 15s (less aggressive to avoid flicker)
+      priceIntervalId = setInterval(updateCurrentBar, 1000) // Price updates every 1s
     } else {
       // Historical mode: WebSocket replay
       console.log(`Connecting to historical WebSocket (${HISTORICAL_WS_URL})...`)
@@ -736,15 +810,11 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                                 // Remove old line
                                 candlestickSeriesRef.current.removePriceLine(bosLine)
 
-                                // Determine color based on agreement
-                                // BoS bullish + Murphy ↑ = agreement (green), BoS bullish + Murphy ↓ = disagreement (red)
-                                const agreementColor = murphy.direction === '↑' ? '#10B981' :
-                                                      murphy.direction === '↓' ? '#EF4444' : '#FFFFFF'
-
+                                // Keep BoS lines white, Murphy info is in the label only
                                 // Create new line with Murphy label
                                 const updatedLine = candlestickSeriesRef.current.createPriceLine({
                                   price: swing.price,
-                                  color: agreementColor,
+                                  color: '#FFFFFF',
                                   lineWidth: 2,
                                   lineStyle: 0,
                                   axisLabelVisible: true,
@@ -831,13 +901,10 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                               if (murphy && candlestickSeriesRef.current) {
                                 candlestickSeriesRef.current.removePriceLine(bosLine)
 
-                                // BoS bearish + Murphy ↓ = agreement (red), BoS bearish + Murphy ↑ = disagreement (green)
-                                const agreementColor = murphy.direction === '↓' ? '#EF4444' :
-                                                      murphy.direction === '↑' ? '#10B981' : '#FFFFFF'
-
+                                // Keep BoS lines white, Murphy info is in the label only
                                 const updatedLine = candlestickSeriesRef.current.createPriceLine({
                                   price: swing.price,
-                                  color: agreementColor,
+                                  color: '#FFFFFF',
                                   lineWidth: 2,
                                   lineStyle: 0,
                                   axisLabelVisible: true,
@@ -970,6 +1037,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
 
     return () => {
       if (intervalId) clearInterval(intervalId)
+      if (priceIntervalId) clearInterval(priceIntervalId)
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null

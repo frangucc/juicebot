@@ -94,6 +94,14 @@ async def startup_event():
     asyncio.create_task(ws_client.start())
     print("[AI Service] 🚀 Starting WebSocket client for bar data...")
 
+    # Start Murphy heat tracker (optional, fails gracefully)
+    try:
+        from murphy_heat_tracker import start_heat_tracker
+        asyncio.create_task(start_heat_tracker())
+        print("[AI Service] 🔥 Starting Murphy heat tracker...")
+    except Exception as e:
+        print(f"[AI Service] ⚠️  Murphy heat tracker not available: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -101,6 +109,14 @@ async def shutdown_event():
     global ws_client
     if ws_client:
         await ws_client.stop()
+
+    # Stop Murphy heat tracker
+    try:
+        from murphy_heat_tracker import stop_heat_tracker
+        stop_heat_tracker()
+    except:
+        pass
+
     print("[AI Service] 👋 Shutting down...")
 
 
@@ -765,6 +781,121 @@ async def get_smc_indicators(symbol: str, lookback: int = 200):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error calculating indicators: {str(e)}")
+
+
+# Murphy Test Lab API Endpoints
+@app.get("/murphy-test/sessions/{symbol}/active")
+async def get_active_murphy_session(symbol: str):
+    """Get the active test session for a symbol."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        if not murphy_recorder:
+            return {"success": False, "message": "Murphy test recorder not available"}
+
+        session = murphy_recorder.get_active_session(symbol)
+
+        if session:
+            return {
+                "success": True,
+                "session": {
+                    "id": session.id,
+                    "symbol": session.symbol,
+                    "started_at": session.started_at.isoformat(),
+                    "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+                    "status": session.status,
+                    "config": session.config,
+                    "metrics": session.metrics,
+                    "notes": session.notes
+                }
+            }
+        else:
+            return {"success": False, "session": None}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching session: {str(e)}")
+
+
+@app.get("/murphy-test/sessions/{session_id}/signals")
+async def get_murphy_signals(session_id: str, passed_filter: Optional[bool] = None, limit: int = 50):
+    """Get signals for a test session."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        if not murphy_recorder:
+            return {"success": False, "message": "Murphy test recorder not available"}
+
+        signals = murphy_recorder.get_session_signals(
+            session_id=session_id,
+            limit=limit,
+            passed_filter=passed_filter
+        )
+
+        return {
+            "success": True,
+            "signals": signals,
+            "count": len(signals)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching signals: {str(e)}")
+
+
+@app.post("/murphy-test/sessions")
+async def create_murphy_session(data: Dict[str, Any]):
+    """Create a new Murphy test session."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        if not murphy_recorder:
+            return {"success": False, "message": "Murphy test recorder not available"}
+
+        symbol = data.get("symbol")
+        notes = data.get("notes")
+        config = data.get("config")
+
+        if not symbol:
+            raise HTTPException(status_code=400, detail="Symbol required")
+
+        session = murphy_recorder.create_session(
+            symbol=symbol,
+            config=config,
+            notes=notes
+        )
+
+        return {
+            "success": True,
+            "session": {
+                "id": session.id,
+                "symbol": session.symbol,
+                "started_at": session.started_at.isoformat(),
+                "status": session.status,
+                "config": session.config,
+                "metrics": session.metrics,
+                "notes": session.notes
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating session: {str(e)}")
+
+
+@app.post("/murphy-test/sessions/{session_id}/end")
+async def end_murphy_session(session_id: str, data: Dict[str, Any]):
+    """End a Murphy test session."""
+    try:
+        from murphy_test_recorder import murphy_recorder
+
+        if not murphy_recorder:
+            return {"success": False, "message": "Murphy test recorder not available"}
+
+        status = data.get("status", "completed")
+        murphy_recorder.end_session(session_id, status)
+
+        return {"success": True, "message": f"Session ended with status: {status}"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ending session: {str(e)}")
 
 
 if __name__ == "__main__":

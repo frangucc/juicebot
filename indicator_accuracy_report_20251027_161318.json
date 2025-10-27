@@ -1,0 +1,74 @@
+{
+  "murphy": {
+    "indicator": "Murphy (SMC)",
+    "total_signals": 3360,
+    "accuracy": {
+      "5bars": 32.63847528290649,
+      "10bars": 38.37902264600715,
+      "20bars": 40.614741868099074,
+      "50bars": 43.673347292850735
+    },
+    "by_stars": {
+      "1": {
+        "count": 914,
+        "accuracy_20bars": 41.05378704720088
+      },
+      "2": {
+        "count": 481,
+        "accuracy_20bars": 38.62212943632568
+      },
+      "3": {
+        "count": 144,
+        "accuracy_20bars": 45.13888888888889
+      },
+      "4": {
+        "count": 270,
+        "accuracy_20bars": 37.54646840148699
+      }
+    },
+    "by_direction": {
+      "bullish_count": 1562,
+      "bullish_accuracy": 41.01412066752246,
+      "bearish_count": 1798,
+      "bearish_accuracy": 40.26770775237033
+    }
+  },
+  "momo": {
+    "indicator": "Momo (Momentum)",
+    "total_signals": 2444,
+    "accuracy": {
+      "5bars": 32.97872340425532,
+      "10bars": 38.1342062193126,
+      "20bars": 40.28688524590164,
+      "50bars": 47.761806981519506
+    },
+    "by_stars": {
+      "3": {
+        "count": 69,
+        "accuracy_20bars": 46.3768115942029
+      },
+      "4": {
+        "count": 50,
+        "accuracy_20bars": 42.0
+      },
+      "5": {
+        "count": 1447,
+        "accuracy_20bars": 38.94663894663894
+      },
+      "6": {
+        "count": 749,
+        "accuracy_20bars": 41.1214953271028
+      },
+      "7": {
+        "count": 129,
+        "accuracy_20bars": 46.51162790697674
+      }
+    },
+    "by_direction": {
+      "bullish_count": 1696,
+      "bullish_accuracy": 42.88245717660957,
+      "bearish_count": 748,
+      "bearish_accuracy": 34.404283801874165
+    }
+  }
+}
