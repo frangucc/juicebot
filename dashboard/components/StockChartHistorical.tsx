@@ -6,6 +6,31 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 const AI_SERVICE_URL = 'http://localhost:8002'
 const HISTORICAL_WS_URL = 'ws://localhost:8001'
 
+// Call Murphy classifier for BoS/CHoCH signals
+async function getMurphyClassification(symbol: string, structurePrice: number, signalType: string) {
+  try {
+    const response = await fetch(`${API_URL}/murphy/classify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol,
+        structure_price: structurePrice,
+        signal_type: signalType,
+      })
+    })
+
+    if (!response.ok) {
+      console.error('Murphy classification failed:', response.statusText)
+      return null
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Failed to get Murphy classification:', error)
+    return null
+  }
+}
+
 // Send bar data to AI service for fast-path responses
 async function updateAIServiceMarketData(symbol: string, bar: BarData) {
   try {
@@ -601,8 +626,8 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
 
                   // Detect BoS and CHoCH - track swing points as they form
                   if (newData.length >= 20) {
-                    const lookback = 5
-                    const recentBars = newData.slice(-30)
+                    const lookback = 10 // Increased for 1-min bars (10 mins each side = 20 min window)
+                    const recentBars = newData.slice(-50) // Need more bars for larger lookback
 
                     // Check if we just formed a new swing high or low
                     if (recentBars.length > lookback * 2) {
@@ -666,7 +691,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                     swingHighsRef.current.forEach(swing => {
                       if (!swing.broken && chartBar.high > swing.price) {
                         // Only mark as BoS if this is higher than previous broken swings
-                        const isNewHigh = swing.price > highestBrokenSwing * 1.001 // At least 0.1% higher
+                        const isNewHigh = swing.price > highestBrokenSwing * 1.003 // At least 0.3% higher (more significant for 1-min bars)
 
                         if (isNewHigh) {
                           swing.broken = true
@@ -674,27 +699,84 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                           // BoS if uptrend (making new highs), CHoCH if downtrend (reversal)
                           if (isUptrend || !isDowntrend) {
                             console.log(`⚪ Bullish BoS at $${swing.price.toFixed(4)} - New high`)
+
+                            // Create initial line with placeholder
                             const bosLine = candlestickSeriesRef.current.createPriceLine({
                               price: swing.price,
                               color: '#FFFFFF',
                               lineWidth: 2,
                               lineStyle: 0,
                               axisLabelVisible: true,
-                              title: '↑',
+                              title: '↑ BoS',
                             })
-                            bosLinesRef.current.push({ line: bosLine, price: swing.price, type: 'bullish', time: chartBar.time })
+
+                            const bosData = { line: bosLine, price: swing.price, type: 'bullish', time: chartBar.time }
+                            bosLinesRef.current.push(bosData)
                             highestBrokenSwing = swing.price
+
+                            // Get Murphy classification and update label
+                            getMurphyClassification(symbol, swing.price, 'bos_bullish').then(murphy => {
+                              if (murphy && candlestickSeriesRef.current) {
+                                // Remove old line
+                                candlestickSeriesRef.current.removePriceLine(bosLine)
+
+                                // Determine color based on agreement
+                                // BoS bullish + Murphy ↑ = agreement (green), BoS bullish + Murphy ↓ = disagreement (red)
+                                const agreementColor = murphy.direction === '↑' ? '#10B981' :
+                                                      murphy.direction === '↓' ? '#EF4444' : '#FFFFFF'
+
+                                // Create new line with Murphy label
+                                const updatedLine = candlestickSeriesRef.current.createPriceLine({
+                                  price: swing.price,
+                                  color: agreementColor,
+                                  lineWidth: 2,
+                                  lineStyle: 0,
+                                  axisLabelVisible: true,
+                                  title: `↑ ${murphy.label}`,
+                                })
+
+                                // Update reference
+                                bosData.line = updatedLine
+                                console.log(`  Murphy: ${murphy.label} - ${murphy.interpretation}`)
+                              }
+                            })
                           } else {
                             console.log(`🔵 CHoCH at $${swing.price.toFixed(4)} - Reversal`)
+
                             const chochLine = candlestickSeriesRef.current.createPriceLine({
                               price: swing.price,
                               color: '#00FFFF',
                               lineWidth: 2,
                               lineStyle: 0,
                               axisLabelVisible: true,
-                              title: '⟳',
+                              title: '⟳ CHoCH',
                             })
-                            chochLinesRef.current.push({ line: chochLine, price: swing.price, type: 'bullish', time: chartBar.time })
+
+                            const chochData = { line: chochLine, price: swing.price, type: 'bullish', time: chartBar.time }
+                            chochLinesRef.current.push(chochData)
+
+                            // Get Murphy classification for CHoCH
+                            getMurphyClassification(symbol, swing.price, 'choch_bullish').then(murphy => {
+                              if (murphy && candlestickSeriesRef.current) {
+                                candlestickSeriesRef.current.removePriceLine(chochLine)
+
+                                // CHoCH bullish + Murphy ↑ = agreement
+                                const agreementColor = murphy.direction === '↑' ? '#10B981' :
+                                                      murphy.direction === '↓' ? '#EF4444' : '#00FFFF'
+
+                                const updatedLine = candlestickSeriesRef.current.createPriceLine({
+                                  price: swing.price,
+                                  color: agreementColor,
+                                  lineWidth: 2,
+                                  lineStyle: 0,
+                                  axisLabelVisible: true,
+                                  title: `⟳ ${murphy.label}`,
+                                })
+
+                                chochData.line = updatedLine
+                                console.log(`  Murphy: ${murphy.label} - ${murphy.interpretation}`)
+                              }
+                            })
                           }
                         } else {
                           // Mark as broken but don't draw a line (minor swing)
@@ -706,7 +788,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                     // Check for breaks of swing lows (only mark if it's a NEW low)
                     swingLowsRef.current.forEach(swing => {
                       if (!swing.broken && chartBar.low < swing.price) {
-                        const isNewLow = swing.price < lowestBrokenSwing * 0.999 // At least 0.1% lower
+                        const isNewLow = swing.price < lowestBrokenSwing * 0.997 // At least 0.3% lower (more significant for 1-min bars)
 
                         if (isNewLow) {
                           swing.broken = true
@@ -714,27 +796,79 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                           // BoS if downtrend (making new lows), CHoCH if uptrend (reversal)
                           if (isDowntrend || !isUptrend) {
                             console.log(`⚪ Bearish BoS at $${swing.price.toFixed(4)} - New low`)
+
                             const bosLine = candlestickSeriesRef.current.createPriceLine({
                               price: swing.price,
                               color: '#FFFFFF',
                               lineWidth: 2,
                               lineStyle: 0,
                               axisLabelVisible: true,
-                              title: '↓',
+                              title: '↓ BoS',
                             })
-                            bosLinesRef.current.push({ line: bosLine, price: swing.price, type: 'bearish', time: chartBar.time })
+
+                            const bosData = { line: bosLine, price: swing.price, type: 'bearish', time: chartBar.time }
+                            bosLinesRef.current.push(bosData)
                             lowestBrokenSwing = swing.price
+
+                            // Get Murphy classification
+                            getMurphyClassification(symbol, swing.price, 'bos_bearish').then(murphy => {
+                              if (murphy && candlestickSeriesRef.current) {
+                                candlestickSeriesRef.current.removePriceLine(bosLine)
+
+                                // BoS bearish + Murphy ↓ = agreement (red), BoS bearish + Murphy ↑ = disagreement (green)
+                                const agreementColor = murphy.direction === '↓' ? '#EF4444' :
+                                                      murphy.direction === '↑' ? '#10B981' : '#FFFFFF'
+
+                                const updatedLine = candlestickSeriesRef.current.createPriceLine({
+                                  price: swing.price,
+                                  color: agreementColor,
+                                  lineWidth: 2,
+                                  lineStyle: 0,
+                                  axisLabelVisible: true,
+                                  title: `↓ ${murphy.label}`,
+                                })
+
+                                bosData.line = updatedLine
+                                console.log(`  Murphy: ${murphy.label} - ${murphy.interpretation}`)
+                              }
+                            })
                           } else {
                             console.log(`🔵 CHoCH at $${swing.price.toFixed(4)} - Reversal`)
+
                             const chochLine = candlestickSeriesRef.current.createPriceLine({
                               price: swing.price,
                               color: '#00FFFF',
                               lineWidth: 2,
                               lineStyle: 0,
                               axisLabelVisible: true,
-                              title: '⟳',
+                              title: '⟳ CHoCH',
                             })
-                            chochLinesRef.current.push({ line: chochLine, price: swing.price, type: 'bearish', time: chartBar.time })
+
+                            const chochData = { line: chochLine, price: swing.price, type: 'bearish', time: chartBar.time }
+                            chochLinesRef.current.push(chochData)
+
+                            // Get Murphy classification
+                            getMurphyClassification(symbol, swing.price, 'choch_bearish').then(murphy => {
+                              if (murphy && candlestickSeriesRef.current) {
+                                candlestickSeriesRef.current.removePriceLine(chochLine)
+
+                                // CHoCH bearish + Murphy ↓ = agreement
+                                const agreementColor = murphy.direction === '↓' ? '#EF4444' :
+                                                      murphy.direction === '↑' ? '#10B981' : '#00FFFF'
+
+                                const updatedLine = candlestickSeriesRef.current.createPriceLine({
+                                  price: swing.price,
+                                  color: agreementColor,
+                                  lineWidth: 2,
+                                  lineStyle: 0,
+                                  axisLabelVisible: true,
+                                  title: `⟳ ${murphy.label}`,
+                                })
+
+                                chochData.line = updatedLine
+                                console.log(`  Murphy: ${murphy.label} - ${murphy.interpretation}`)
+                              }
+                            })
                           }
                         } else {
                           swing.broken = true

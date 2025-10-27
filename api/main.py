@@ -23,9 +23,18 @@ import asyncio
 from shared.database import supabase
 from shared.config import settings
 
+# Import Murphy classifier
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from murphy_classifier_v2 import MurphyClassifier, Bar
+
 # Cache for leaderboard data (30 second TTL)
 _leaderboard_cache = {}
 _cache_ttl = 30
+
+# Initialize Murphy classifier (singleton)
+murphy_classifier = MurphyClassifier()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -62,6 +71,24 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     database: str
+
+
+class MurphyClassifyRequest(BaseModel):
+    """Request model for Murphy classification."""
+    symbol: str
+    structure_price: float
+    signal_type: str  # 'bos_bullish', 'bos_bearish', 'choch_bullish', 'choch_bearish'
+    lookback: Optional[int] = None  # Optional, will be calculated if not provided
+
+
+class MurphyClassifyResponse(BaseModel):
+    """Response model for Murphy classification."""
+    direction: str  # '↑', '↓', or '−'
+    stars: int  # 0-4
+    grade: int  # 1-10
+    confidence: float
+    label: str  # Formatted label like '↑ **** [8]'
+    interpretation: str
 
 
 # Routes
@@ -640,6 +667,82 @@ async def get_discord_juice_boxes():
         # Return empty dict on error (graceful degradation)
         print(f"Discord juice box query failed: {str(e)}")
         return {}
+
+
+@app.post("/murphy/classify", response_model=MurphyClassifyResponse)
+async def classify_with_murphy(request: MurphyClassifyRequest):
+    """
+    Classify a BoS/CHoCH signal using Murphy's classifier.
+
+    Args:
+        request: Murphy classification request with symbol, structure_price, and signal_type
+
+    Returns:
+        Murphy's analysis with direction, stars, grade, and interpretation
+    """
+    try:
+        # Fetch recent bars for the symbol (use larger lookback for context)
+        lookback_bars = request.lookback if request.lookback else 100
+
+        response = (
+            supabase.table("price_bars")
+            .select("*")
+            .eq("symbol", request.symbol.upper())
+            .order("timestamp", desc=True)
+            .limit(lookback_bars)
+            .execute()
+        )
+
+        if not response.data or len(response.data) < 20:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Insufficient bar data for {request.symbol} (need at least 20 bars)"
+            )
+
+        # Convert to Bar objects (reverse to chronological order)
+        bars = []
+        for idx, bar_data in enumerate(reversed(response.data)):
+            bars.append(Bar(
+                timestamp=bar_data['timestamp'],
+                open=float(bar_data['open']),
+                high=float(bar_data['high']),
+                low=float(bar_data['low']),
+                close=float(bar_data['close']),
+                volume=float(bar_data['volume']),
+                index=idx
+            ))
+
+        # Calculate structure age (time since the signal)
+        current_index = len(bars) - 1
+        structure_age_bars = 10  # Default assumption: structure formed ~10 bars ago
+
+        # Run Murphy classification
+        murphy_signal = murphy_classifier.classify(
+            bars=bars,
+            signal_index=current_index,
+            structure_age_bars=structure_age_bars,
+            level_price=request.structure_price
+        )
+
+        # Format the label
+        label = murphy_classifier.format_label(murphy_signal)
+
+        return MurphyClassifyResponse(
+            direction=murphy_signal.direction,
+            stars=murphy_signal.stars,
+            grade=murphy_signal.grade,
+            confidence=murphy_signal.confidence,
+            label=label,
+            interpretation=murphy_signal.interpretation
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Murphy classification failed: {str(e)}"
+        )
 
 
 @app.websocket("/ws/prices")

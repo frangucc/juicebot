@@ -87,6 +87,34 @@ class TradingClassifierV2:
                         matched_pattern=f"scaleout_speed:{speed}"
                     )
 
+            if state and state['command'] == 'scalein_speed_selection':
+                # User is responding to scalein speed prompt
+                msg_lower = message.strip().lower()
+
+                # Map user input to speed
+                speed_map = {
+                    '1': 'fast',
+                    'fast': 'fast',
+                    '2': 'medium',
+                    'medium': 'medium',
+                    '3': 'slow',
+                    'slow': 'slow'
+                }
+
+                if msg_lower in speed_map:
+                    speed = speed_map[msg_lower]
+                    result = await self.executor.execute_scalein_with_speed(
+                        state['symbol'],
+                        state['side'],
+                        state['quantity'],
+                        speed
+                    )
+
+                    return FastResponse(
+                        text=result,
+                        matched_pattern=f"scalein_speed:{speed}"
+                    )
+
         # Try indicators first (vp, rvol, vwap, voltrend)
         indicator_result = await self.indicator_executor.execute(message, symbol)
         if indicator_result:

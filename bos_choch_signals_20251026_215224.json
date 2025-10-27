@@ -1,0 +1,649 @@
+{
+  "config": {
+    "lookback": 10,
+    "significance_threshold": 0.003,
+    "total_bars": 5352
+  },
+  "metrics": {
+    "total_signals": 54,
+    "signals_analyzed": 54,
+    "overall_accuracy": 59.25925925925925,
+    "correct_signals": 32,
+    "incorrect_signals": 22,
+    "by_type": {
+      "bos_bullish": {
+        "count": 45,
+        "accuracy": 68.88888888888889,
+        "avg_strength": 97.11111111111111
+      },
+      "bos_bearish": {
+        "count": 1,
+        "accuracy": 0.0,
+        "avg_strength": 80.0
+      },
+      "choch_bullish": {
+        "count": 8,
+        "accuracy": 12.5,
+        "avg_strength": 99.375
+      },
+      "choch_bearish": {
+        "count": 0,
+        "accuracy": 0,
+        "avg_strength": 0
+      }
+    },
+    "by_strength": {
+      "high (70-100)": {
+        "count": 53,
+        "accuracy": 60.37735849056604,
+        "avg_move_10bars": 6.148961212898497
+      },
+      "medium (50-69)": {
+        "count": 1,
+        "accuracy": 0.0,
+        "avg_move_10bars": 1.0362694300518145
+      },
+      "low (0-49)": {
+        "count": 0,
+        "accuracy": 0,
+        "avg_move_10bars": 0
+      }
+    }
+  },
+  "signals": [
+    {
+      "index": 71,
+      "timestamp": "2025-10-17T06:06:00+00:00",
+      "price": 0.5348,
+      "signal_type": "bos_bearish",
+      "strength_score": 80.0,
+      "next_5_bars_move": -1.0845175766641786,
+      "next_10_bars_move": 2.6551982049364224,
+      "next_20_bars_move": -1.2528047868362078,
+      "was_correct": false
+    },
+    {
+      "index": 104,
+      "timestamp": "2025-10-17T07:20:00+00:00",
+      "price": 0.5641,
+      "signal_type": "bos_bullish",
+      "strength_score": 95.0,
+      "next_5_bars_move": 4.573657152987047,
+      "next_10_bars_move": 4.378656266619384,
+      "next_20_bars_move": 4.591384506293196,
+      "was_correct": true
+    },
+    {
+      "index": 109,
+      "timestamp": "2025-10-17T07:25:00+00:00",
+      "price": 0.5786,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 1.762875907362597,
+      "next_10_bars_move": 2.298651918423778,
+      "next_20_bars_move": 2.143104044244723,
+      "was_correct": true
+    },
+    {
+      "index": 186,
+      "timestamp": "2025-10-17T08:51:00+00:00",
+      "price": 0.6248,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 2.4967989756722067,
+      "next_10_bars_move": 0.5121638924455795,
+      "next_20_bars_move": 0.6081946222791333,
+      "was_correct": true
+    },
+    {
+      "index": 210,
+      "timestamp": "2025-10-17T09:15:00+00:00",
+      "price": 0.6599,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 7.395059857554168,
+      "next_10_bars_move": 10.941051674496125,
+      "next_20_bars_move": 1.1819972723139744,
+      "was_correct": true
+    },
+    {
+      "index": 353,
+      "timestamp": "2025-10-17T11:39:00+00:00",
+      "price": 0.6645,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -3.4311512415349785,
+      "next_10_bars_move": -3.220466516177573,
+      "next_20_bars_move": -1.9112114371707951,
+      "was_correct": false
+    },
+    {
+      "index": 387,
+      "timestamp": "2025-10-17T12:13:00+00:00",
+      "price": 0.6669,
+      "signal_type": "bos_bullish",
+      "strength_score": 95.0,
+      "next_5_bars_move": -1.2145748987854244,
+      "next_10_bars_move": -1.0346378767431423,
+      "next_20_bars_move": -1.244564402459152,
+      "was_correct": false
+    },
+    {
+      "index": 552,
+      "timestamp": "2025-10-17T15:00:00+00:00",
+      "price": 0.6806,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -2.1010872759329975,
+      "next_10_bars_move": -2.012929767851886,
+      "next_20_bars_move": -0.82280340875697,
+      "was_correct": false
+    },
+    {
+      "index": 552,
+      "timestamp": "2025-10-17T15:00:00+00:00",
+      "price": 0.67,
+      "signal_type": "choch_bullish",
+      "strength_score": 95.0,
+      "next_5_bars_move": -0.5522388059701547,
+      "next_10_bars_move": -0.4626865671641779,
+      "next_20_bars_move": 0.7462686567164185,
+      "was_correct": false
+    },
+    {
+      "index": 595,
+      "timestamp": "2025-10-17T15:50:00+00:00",
+      "price": 0.6853,
+      "signal_type": "bos_bullish",
+      "strength_score": 95.0,
+      "next_5_bars_move": 1.8969794250693144,
+      "next_10_bars_move": 6.420545746388433,
+      "next_20_bars_move": 5.2239894936524065,
+      "was_correct": true
+    },
+    {
+      "index": 601,
+      "timestamp": "2025-10-17T15:56:00+00:00",
+      "price": 0.7,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 3.342857142857156,
+      "next_10_bars_move": 4.357142857142869,
+      "next_20_bars_move": 1.7000000000000033,
+      "was_correct": true
+    },
+    {
+      "index": 605,
+      "timestamp": "2025-10-17T16:00:00+00:00",
+      "price": 0.725,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 1.875862068965525,
+      "next_10_bars_move": -0.5379310344827607,
+      "next_20_bars_move": -0.5241379310344862,
+      "was_correct": false
+    },
+    {
+      "index": 708,
+      "timestamp": "2025-10-17T18:15:00+00:00",
+      "price": 0.7291,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -0.5486215882594985,
+      "next_10_bars_move": 0.8915100809216927,
+      "next_20_bars_move": 0.12343985735838868,
+      "was_correct": true
+    },
+    {
+      "index": 736,
+      "timestamp": "2025-10-20T03:00:00+00:00",
+      "price": 0.7529,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 39.46075175986187,
+      "next_10_bars_move": 43.4453446672865,
+      "next_20_bars_move": 38.13255412405366,
+      "was_correct": true
+    },
+    {
+      "index": 1121,
+      "timestamp": "2025-10-20T09:40:00+00:00",
+      "price": 0.976,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -2.1004098360655696,
+      "next_10_bars_move": -0.8299180327868848,
+      "next_20_bars_move": -1.0245901639344273,
+      "was_correct": false
+    },
+    {
+      "index": 1144,
+      "timestamp": "2025-10-20T10:03:00+00:00",
+      "price": 0.9851,
+      "signal_type": "bos_bullish",
+      "strength_score": 90.0,
+      "next_5_bars_move": 8.110851690183734,
+      "next_10_bars_move": 11.156227794132576,
+      "next_20_bars_move": 10.14110242614963,
+      "was_correct": true
+    },
+    {
+      "index": 1148,
+      "timestamp": "2025-10-20T10:07:00+00:00",
+      "price": 1.05,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 3.3333333333333255,
+      "next_10_bars_move": 6.190476190476185,
+      "next_20_bars_move": 4.761904761904765,
+      "was_correct": true
+    },
+    {
+      "index": 1150,
+      "timestamp": "2025-10-20T10:09:00+00:00",
+      "price": 1.08,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 0.46296296296295303,
+      "next_10_bars_move": 6.018518518518514,
+      "next_20_bars_move": 1.3888888888888797,
+      "was_correct": true
+    },
+    {
+      "index": 1150,
+      "timestamp": "2025-10-20T10:09:00+00:00",
+      "price": 1.07,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 1.4018691588784955,
+      "next_10_bars_move": 7.009345794392519,
+      "next_20_bars_move": 2.3364485981308327,
+      "was_correct": true
+    },
+    {
+      "index": 1232,
+      "timestamp": "2025-10-20T11:31:00+00:00",
+      "price": 1.15,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 3.043478260869578,
+      "next_10_bars_move": 2.6086956521739157,
+      "next_20_bars_move": 3.913043478260883,
+      "was_correct": true
+    },
+    {
+      "index": 1254,
+      "timestamp": "2025-10-20T11:53:00+00:00",
+      "price": 1.2,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -1.249999999999992,
+      "next_10_bars_move": -1.249999999999992,
+      "next_20_bars_move": 0.4166666666666763,
+      "was_correct": false
+    },
+    {
+      "index": 1254,
+      "timestamp": "2025-10-20T11:53:00+00:00",
+      "price": 1.2,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -1.249999999999992,
+      "next_10_bars_move": -1.249999999999992,
+      "next_20_bars_move": 0.4166666666666763,
+      "was_correct": false
+    },
+    {
+      "index": 1255,
+      "timestamp": "2025-10-20T11:54:00+00:00",
+      "price": 1.24,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -4.435483870967737,
+      "next_10_bars_move": -6.04838709677419,
+      "next_20_bars_move": -2.822580645161284,
+      "was_correct": false
+    },
+    {
+      "index": 1314,
+      "timestamp": "2025-10-20T12:53:00+00:00",
+      "price": 1.39,
+      "signal_type": "bos_bullish",
+      "strength_score": 85.0,
+      "next_5_bars_move": 8.992805755395684,
+      "next_10_bars_move": 5.755395683453243,
+      "next_20_bars_move": 6.115107913669079,
+      "was_correct": true
+    },
+    {
+      "index": 1434,
+      "timestamp": "2025-10-20T14:53:00+00:00",
+      "price": 1.46,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -0.34246575342465024,
+      "next_10_bars_move": -3.424657534246579,
+      "next_20_bars_move": 2.739726027397263,
+      "was_correct": false
+    },
+    {
+      "index": 1441,
+      "timestamp": "2025-10-20T15:00:00+00:00",
+      "price": 1.52,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -6.5789473684210575,
+      "next_10_bars_move": -3.2894736842105288,
+      "next_20_bars_move": 2.6315789473684235,
+      "was_correct": false
+    },
+    {
+      "index": 1576,
+      "timestamp": "2025-10-20T17:31:00+00:00",
+      "price": 1.59,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 5.031446540880494,
+      "next_10_bars_move": 4.40251572327043,
+      "next_20_bars_move": 6.28930817610062,
+      "was_correct": true
+    },
+    {
+      "index": 1576,
+      "timestamp": "2025-10-20T17:31:00+00:00",
+      "price": 1.57,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 6.369426751592348,
+      "next_10_bars_move": 5.732484076433112,
+      "next_20_bars_move": 7.643312101910821,
+      "was_correct": true
+    },
+    {
+      "index": 1837,
+      "timestamp": "2025-10-21T06:00:00+00:00",
+      "price": 1.93,
+      "signal_type": "bos_bullish",
+      "strength_score": 65.0,
+      "next_5_bars_move": 1.5544041450777215,
+      "next_10_bars_move": -1.0362694300518145,
+      "next_20_bars_move": -2.072538860103629,
+      "was_correct": false
+    },
+    {
+      "index": 1841,
+      "timestamp": "2025-10-21T06:04:00+00:00",
+      "price": 1.94,
+      "signal_type": "bos_bullish",
+      "strength_score": 95.0,
+      "next_5_bars_move": -3.092783505154642,
+      "next_10_bars_move": -1.0309278350515474,
+      "next_20_bars_move": -1.0309278350515474,
+      "was_correct": false
+    },
+    {
+      "index": 1877,
+      "timestamp": "2025-10-21T06:42:00+00:00",
+      "price": 1.99,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 0.5025125628140708,
+      "next_10_bars_move": 6.532663316582921,
+      "next_20_bars_move": 7.537688442211062,
+      "was_correct": true
+    },
+    {
+      "index": 1884,
+      "timestamp": "2025-10-21T06:49:00+00:00",
+      "price": 2.04,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 7.352941176470584,
+      "next_10_bars_move": 2.450980392156854,
+      "next_20_bars_move": 0.0,
+      "was_correct": true
+    },
+    {
+      "index": 1915,
+      "timestamp": "2025-10-21T07:20:00+00:00",
+      "price": 2.2,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -0.454545454545465,
+      "next_10_bars_move": -1.3636363636363749,
+      "next_20_bars_move": 2.2727272727272645,
+      "was_correct": false
+    },
+    {
+      "index": 2097,
+      "timestamp": "2025-10-21T10:22:00+00:00",
+      "price": 2.235,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 2.4608501118568307,
+      "next_10_bars_move": 4.921700223713661,
+      "next_20_bars_move": 4.026845637583906,
+      "was_correct": true
+    },
+    {
+      "index": 2122,
+      "timestamp": "2025-10-21T10:47:00+00:00",
+      "price": 2.375,
+      "signal_type": "bos_bullish",
+      "strength_score": 85.0,
+      "next_5_bars_move": -0.4210526315789384,
+      "next_10_bars_move": -2.1052631578947296,
+      "next_20_bars_move": -1.0526315789473648,
+      "was_correct": false
+    },
+    {
+      "index": 2161,
+      "timestamp": "2025-10-21T11:26:00+00:00",
+      "price": 2.45,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 6.326530612244889,
+      "next_10_bars_move": 8.57142857142857,
+      "next_20_bars_move": 8.163265306122437,
+      "was_correct": true
+    },
+    {
+      "index": 2163,
+      "timestamp": "2025-10-21T11:28:00+00:00",
+      "price": 2.5,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 6.400000000000006,
+      "next_10_bars_move": 9.800000000000004,
+      "next_20_bars_move": 7.400000000000002,
+      "was_correct": true
+    },
+    {
+      "index": 2163,
+      "timestamp": "2025-10-21T11:28:00+00:00",
+      "price": 2.48,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 7.258064516129038,
+      "next_10_bars_move": 10.685483870967747,
+      "next_20_bars_move": 8.266129032258068,
+      "was_correct": true
+    },
+    {
+      "index": 2192,
+      "timestamp": "2025-10-21T11:57:00+00:00",
+      "price": 2.79,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 1.612903225806449,
+      "next_10_bars_move": 1.2544802867383564,
+      "next_20_bars_move": -3.5842293906810068,
+      "was_correct": true
+    },
+    {
+      "index": 2276,
+      "timestamp": "2025-10-21T13:21:00+00:00",
+      "price": 2.85,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -0.7017543859649129,
+      "next_10_bars_move": -1.5789473684210502,
+      "next_20_bars_move": -2.631578947368427,
+      "was_correct": false
+    },
+    {
+      "index": 2281,
+      "timestamp": "2025-10-21T13:26:00+00:00",
+      "price": 2.925,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -4.1025641025640915,
+      "next_10_bars_move": -2.564102564102555,
+      "next_20_bars_move": -3.4188034188034067,
+      "was_correct": false
+    },
+    {
+      "index": 2308,
+      "timestamp": "2025-10-21T13:53:00+00:00",
+      "price": 2.97,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 4.2087542087542085,
+      "next_10_bars_move": 8.417508417508417,
+      "next_20_bars_move": 16.16161616161616,
+      "was_correct": true
+    },
+    {
+      "index": 2368,
+      "timestamp": "2025-10-21T14:53:00+00:00",
+      "price": 3.72,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -2.0161290322580694,
+      "next_10_bars_move": -3.4946236559139874,
+      "next_20_bars_move": 6.720430107526881,
+      "was_correct": false
+    },
+    {
+      "index": 2370,
+      "timestamp": "2025-10-21T14:55:00+00:00",
+      "price": 3.84,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -2.0833333333333353,
+      "next_10_bars_move": -1.3020833333333286,
+      "next_20_bars_move": 2.0833333333333353,
+      "was_correct": false
+    },
+    {
+      "index": 2382,
+      "timestamp": "2025-10-21T15:07:00+00:00",
+      "price": 3.86,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 1.8134715025906811,
+      "next_10_bars_move": 4.404145077720218,
+      "next_20_bars_move": 21.502590673575146,
+      "was_correct": true
+    },
+    {
+      "index": 2615,
+      "timestamp": "2025-10-22T03:00:00+00:00",
+      "price": 4.82,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 8.506224066390045,
+      "next_10_bars_move": 9.12863070539418,
+      "next_20_bars_move": 12.655601659751026,
+      "was_correct": true
+    },
+    {
+      "index": 2615,
+      "timestamp": "2025-10-22T03:00:00+00:00",
+      "price": 4.75,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 10.105263157894747,
+      "next_10_bars_move": 10.736842105263152,
+      "next_20_bars_move": 14.315789473684204,
+      "was_correct": true
+    },
+    {
+      "index": 2615,
+      "timestamp": "2025-10-22T03:00:00+00:00",
+      "price": 4.6,
+      "signal_type": "bos_bullish",
+      "strength_score": 85.0,
+      "next_5_bars_move": 13.69565217391306,
+      "next_10_bars_move": 14.347826086956525,
+      "next_20_bars_move": 18.04347826086957,
+      "was_correct": true
+    },
+    {
+      "index": 2615,
+      "timestamp": "2025-10-22T03:00:00+00:00",
+      "price": 4.58,
+      "signal_type": "bos_bullish",
+      "strength_score": 80.0,
+      "next_5_bars_move": 14.192139737991274,
+      "next_10_bars_move": 14.847161572052395,
+      "next_20_bars_move": 18.558951965065496,
+      "was_correct": true
+    },
+    {
+      "index": 2660,
+      "timestamp": "2025-10-22T03:45:00+00:00",
+      "price": 5.55,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 12.792792792792792,
+      "next_10_bars_move": 19.09909909909911,
+      "next_20_bars_move": 16.21621621621622,
+      "was_correct": true
+    },
+    {
+      "index": 2692,
+      "timestamp": "2025-10-22T04:17:00+00:00",
+      "price": 6.95,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 11.079136690647475,
+      "next_10_bars_move": 25.323741007194258,
+      "next_20_bars_move": 8.92086330935252,
+      "was_correct": true
+    },
+    {
+      "index": 2900,
+      "timestamp": "2025-10-22T07:45:00+00:00",
+      "price": 7.0,
+      "signal_type": "bos_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": 3.714285714285711,
+      "next_10_bars_move": 0.42857142857143216,
+      "next_20_bars_move": -0.7142857142857117,
+      "was_correct": true
+    },
+    {
+      "index": 2992,
+      "timestamp": "2025-10-22T09:29:00+00:00",
+      "price": 7.34,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -4.223433242506807,
+      "next_10_bars_move": -4.49591280653951,
+      "next_20_bars_move": -10.762942779291555,
+      "was_correct": false
+    },
+    {
+      "index": 2993,
+      "timestamp": "2025-10-22T09:30:00+00:00",
+      "price": 7.55,
+      "signal_type": "choch_bullish",
+      "strength_score": 100,
+      "next_5_bars_move": -9.470198675496686,
+      "next_10_bars_move": -8.874172185430462,
+      "next_20_bars_move": -9.933774834437086,
+      "was_correct": false
+    }
+  ]
+}

@@ -70,6 +70,13 @@ if [ -d .pids ]; then
     lsof -ti:8002 | xargs kill -9 2>/dev/null || true
 
     echo "${GREEN}✓ Ports cleaned (3000, 8000, 8001, 8002)${NC}"
+
+    # Clear Next.js build cache to force recompile
+    if [ -d dashboard/.next ]; then
+        echo "Clearing Next.js build cache..."
+        rm -rf dashboard/.next
+        echo "${GREEN}✓ Next.js cache cleared${NC}"
+    fi
 else
     echo "No PID directory found. Services may not be running."
 

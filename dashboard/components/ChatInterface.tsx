@@ -98,7 +98,8 @@ BASIC:
 
 ADVANCED:
   accumulate → scale into position 🟢 F
-  scaleout → scale out of position 🟢 F
+  scalein → gradually enter position 🟢 F
+  scaleout → gradually exit position 🟢 F
   reverse → flip position instantly 🟢 F
   stop / sl → set stop loss 🟢 F
   bracket → entry + stop + target 🟢 F
@@ -182,6 +183,11 @@ All commands save to database.`,
         name: 'scaleout',
         description: 'Gradually exit position in chunks 🟢 F',
         handler: () => 'EXECUTE_DIRECT:scaleout'
+      },
+      {
+        name: 'scalein',
+        description: 'Gradually enter position in chunks 🟢 F',
+        handler: () => 'EXECUTE_DIRECT:scalein'
       },
       {
         name: 'reverse',
@@ -752,6 +758,28 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
           // Close connection after scaleout finishes
           disconnectEventsWebSocket()
         }
+        // Update scalein status bar from events
+        else if (evt.type === 'scalein_start') {
+          setScaleoutStatus({
+            active: true,
+            message: `Scalein: ${evt.data?.total_qty || '?'} shares in ${evt.data?.num_chunks || '?'} chunks`,
+            quantity: evt.data?.total_qty,
+            totalChunks: evt.data?.num_chunks
+          })
+        } else if (evt.type === 'scalein_progress') {
+          setScaleoutStatus({
+            active: true,
+            message: `Scalein ${evt.data?.chunk_num || '?'}/${evt.data?.total_chunks || '?'}`,
+            quantity: evt.data?.position_qty,
+            price: evt.data?.price,
+            currentChunk: evt.data?.chunk_num,
+            totalChunks: evt.data?.total_chunks
+          })
+        } else if (evt.type === 'scalein_complete' || evt.type === 'scalein_cancelled') {
+          setScaleoutStatus(null)
+          // Close connection after scalein finishes
+          disconnectEventsWebSocket()
+        }
 
         // Add event as assistant message if it has content
         if (evt.message) {
@@ -789,7 +817,11 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
 
   const cancelScaleout = async () => {
     try {
-      const response = await fetch(`http://localhost:8002/scaleout/${symbol}/cancel`, {
+      // Detect if this is scalein or scaleout
+      const isScalein = scaleoutStatus?.message?.includes('Scalein')
+      const endpoint = isScalein ? 'scalein' : 'scaleout'
+
+      const response = await fetch(`http://localhost:8002/${endpoint}/${symbol}/cancel`, {
         method: 'POST'
       })
       const data = await response.json()
@@ -799,7 +831,7 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
         disconnectEventsWebSocket()
       }
     } catch (error) {
-      console.error('Error cancelling scaleout:', error)
+      console.error(`Error cancelling ${scaleoutStatus?.message?.includes('Scalein') ? 'scalein' : 'scaleout'}:`, error)
     }
   }
 
@@ -1138,13 +1170,14 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
         setTrackingMessageId(assistantMessage.id)
       }
 
-      // Start WebSocket event stream if scaleout was initiated
-      if (data.response && data.response.includes('SCALEOUT INITIATED')) {
-        console.log('[EventsWS] ⚡ SCALEOUT DETECTED - CONNECTING TO EVENT STREAM')
+      // Start WebSocket event stream if scaleout or scalein was initiated
+      if (data.response && (data.response.includes('SCALEOUT INITIATED') || data.response.includes('SCALEIN INITIATED'))) {
+        const operationType = data.response.includes('SCALEOUT INITIATED') ? 'SCALEOUT' : 'SCALEIN'
+        console.log(`[EventsWS] ⚡ ${operationType} DETECTED - CONNECTING TO EVENT STREAM`)
         console.log('[EventsWS] Response:', data.response)
         connectEventsWebSocket()
       } else {
-        console.log('[EventsWS] No scaleout detected in response')
+        console.log('[EventsWS] No scaleout/scalein detected in response')
       }
 
       setLoadingStatus('')
@@ -1290,22 +1323,26 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
           </div>
         )}
 
-        {/* Scaleout Status Bar */}
+        {/* Scaleout/Scalein Status Bar */}
         {scaleoutStatus && scaleoutStatus.active && (
-          <div className="h-[40px] bg-green-500/10 backdrop-blur-sm border-t border-green-500/30 flex items-center justify-between px-4 font-mono text-sm">
+          <div className="absolute bottom-[60px] left-0 right-0 h-[40px] bg-green-500/10 backdrop-blur-sm border-t border-green-500/30 flex items-center justify-between px-4 font-mono text-sm z-[1001]">
             <div className="flex items-center gap-3">
-              <span className="text-green-400">🔄</span>
-              <span className="text-green-300">Scaleout running:</span>
-              <span className="text-white">{scaleoutStatus.message}</span>
-              {scaleoutStatus.quantity && scaleoutStatus.price && (
+              <span className="text-green-300">
+                {scaleoutStatus.message.includes('Scalein') ? 'Scalein' : 'Scaleout'} running:
+              </span>
+              <span className="text-white">
+                Chunk {scaleoutStatus.currentChunk || '?'}/{scaleoutStatus.totalChunks || '?'}
+              </span>
+              {scaleoutStatus.quantity !== undefined && (
                 <span className="text-green-400">
-                  {scaleoutStatus.quantity} @ ${scaleoutStatus.price.toFixed(2)}
+                  {scaleoutStatus.quantity.toLocaleString()}
+                  {scaleoutStatus.price && ` @ $${scaleoutStatus.price.toFixed(2)}`}
                 </span>
               )}
             </div>
             <button
               onClick={cancelScaleout}
-              className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 font-mono text-xs transition-colors"
+              className="text-red-400 hover:text-red-300 font-mono text-xs transition-colors"
               type="button"
             >
               CANCEL

@@ -1,0 +1,516 @@
+================================================================================
+BoS/CHoCH REGRESSION TEST REPORT
+================================================================================
+Generated: 2025-10-26 21:46:51
+Dataset: BYND - 5352 bars
+
+DATASET OVERVIEW
+--------------------------------------------------------------------------------
+First bar: 2025-10-17T03:02:00+00:00 @ $0.5795
+Last bar:  2025-10-24T18:59:00+00:00 @ $2.0100
+High:      $8.8500
+Low:       $0.5165
+
+SIGNAL DETECTION SUMMARY
+--------------------------------------------------------------------------------
+Total signals detected: 222
+Signals with predictions: 222
+Overall accuracy: 80.18%
+  ✓ Correct predictions: 178
+  ✗ Incorrect predictions: 44
+
+ACCURACY BY SIGNAL TYPE
+--------------------------------------------------------------------------------
+BOS_BEARISH
+  Count: 116
+  Accuracy: 98.28%
+  Avg Strength: 95.00
+
+CHOCH_BULLISH
+  Count: 106
+  Accuracy: 60.38%
+  Avg Strength: 85.71
+
+ACCURACY BY STRENGTH SCORE
+--------------------------------------------------------------------------------
+high (70-100)
+  Count: 214
+  Accuracy: 81.31%
+  Avg 10-bar move: 38.36%
+
+medium (50-69)
+  Count: 8
+  Accuracy: 50.00%
+  Avg 10-bar move: 3.74%
+
+TOP 10 STRONGEST SIGNALS
+--------------------------------------------------------------------------------
+1. BOS_BEARISH @ $0.6101
+   Strength: 100.00 | 10-bar move: -8.21% ✓
+2. BOS_BEARISH @ $0.6239
+   Strength: 100.00 | 10-bar move: -10.24% ✓
+3. BOS_BEARISH @ $0.6302
+   Strength: 100.00 | 10-bar move: -11.14% ✓
+4. BOS_BEARISH @ $0.6332
+   Strength: 100.00 | 10-bar move: -11.56% ✓
+5. BOS_BEARISH @ $0.6400
+   Strength: 100.00 | 10-bar move: -12.50% ✓
+6. BOS_BEARISH @ $0.6300
+   Strength: 100.00 | 10-bar move: -11.11% ✓
+7. BOS_BEARISH @ $0.6646
+   Strength: 100.00 | 10-bar move: -15.74% ✓
+8. BOS_BEARISH @ $0.9200
+   Strength: 100.00 | 10-bar move: -39.13% ✓
+9. BOS_BEARISH @ $0.9265
+   Strength: 100.00 | 10-bar move: -39.56% ✓
+10. BOS_BEARISH @ $0.9800
+   Strength: 100.00 | 10-bar move: -42.86% ✓
+
+ALL SIGNALS (CHRONOLOGICAL)
+--------------------------------------------------------------------------------
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.5700
+  Strength:  85.0 | Moves: 5bar= -3.51% 10bar= -1.75% 20bar= -0.79% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6100
+  Strength:  85.0 | Moves: 5bar= -9.84% 10bar= -8.20% 20bar= -7.30% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6101
+  Strength: 100.0 | Moves: 5bar= -9.85% 10bar= -8.21% 20bar= -7.31% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6239
+  Strength: 100.0 | Moves: 5bar=-11.84% 10bar=-10.24% 20bar= -9.36% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6302
+  Strength: 100.0 | Moves: 5bar=-12.73% 10bar=-11.14% 20bar=-10.27% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6332
+  Strength: 100.0 | Moves: 5bar=-13.14% 10bar=-11.56% 20bar=-10.69% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6452
+  Strength:  95.0 | Moves: 5bar=-14.76% 10bar=-13.21% 20bar=-12.35% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6400
+  Strength: 100.0 | Moves: 5bar=-14.06% 10bar=-12.50% 20bar=-11.64% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.5921
+  Strength:  90.0 | Moves: 5bar= -7.11% 10bar= -5.42% 20bar= -4.49% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6300
+  Strength: 100.0 | Moves: 5bar=-12.70% 10bar=-11.11% 20bar=-10.24% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6646
+  Strength: 100.0 | Moves: 5bar=-17.24% 10bar=-15.74% 20bar=-14.91% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.7052
+  Strength:  90.0 | Moves: 5bar=-22.01% 10bar=-20.59% 20bar=-19.81% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6710
+  Strength:  90.0 | Moves: 5bar=-18.03% 10bar=-16.54% 20bar=-15.72% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.6850
+  Strength:  75.0 | Moves: 5bar=-19.71% 10bar=-18.25% 20bar=-17.45% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.7100
+  Strength:  75.0 | Moves: 5bar=-22.54% 10bar=-21.13% 20bar=-20.35% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9800
+  Strength:  85.0 | Moves: 5bar=-43.88% 10bar=-42.86% 20bar=-42.30% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.0600
+  Strength:  85.0 | Moves: 5bar=-48.11% 10bar=-47.17% 20bar=-46.65% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9200
+  Strength:  95.0 | Moves: 5bar=-40.22% 10bar=-39.13% 20bar=-38.53% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9968
+  Strength:  95.0 | Moves: 5bar=-44.82% 10bar=-43.82% 20bar=-43.27% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9799
+  Strength:  85.0 | Moves: 5bar=-43.87% 10bar=-42.85% 20bar=-42.29% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9886
+  Strength:  85.0 | Moves: 5bar=-44.37% 10bar=-43.35% 20bar=-42.80% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.8827
+  Strength:  85.0 | Moves: 5bar=-37.69% 10bar=-36.56% 20bar=-35.94% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9200
+  Strength: 100.0 | Moves: 5bar=-40.22% 10bar=-39.13% 20bar=-38.53% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9265
+  Strength: 100.0 | Moves: 5bar=-40.64% 10bar=-39.56% 20bar=-38.96% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9527
+  Strength:  85.0 | Moves: 5bar=-42.27% 10bar=-41.22% 20bar=-40.64% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.0650
+  Strength:  95.0 | Moves: 5bar=-48.36% 10bar=-47.42% 20bar=-46.90% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $0.9800
+  Strength: 100.0 | Moves: 5bar=-43.88% 10bar=-42.86% 20bar=-42.30% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.1400
+  Strength: 100.0 | Moves: 5bar=-51.75% 10bar=-50.88% 20bar=-50.39% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.2800
+  Strength: 100.0 | Moves: 5bar=-57.03% 10bar=-56.25% 20bar=-55.82% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.3100
+  Strength: 100.0 | Moves: 5bar=-58.02% 10bar=-57.25% 20bar=-56.83% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.2700
+  Strength: 100.0 | Moves: 5bar=-56.69% 10bar=-55.91% 20bar=-55.47% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.2800
+  Strength: 100.0 | Moves: 5bar=-57.03% 10bar=-56.25% 20bar=-55.82% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.4100
+  Strength: 100.0 | Moves: 5bar=-60.99% 10bar=-60.28% 20bar=-59.89% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.6400
+  Strength:  85.0 | Moves: 5bar=-66.46% 10bar=-65.85% 20bar=-65.52% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.7000
+  Strength: 100.0 | Moves: 5bar=-67.65% 10bar=-67.06% 20bar=-66.74% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.6600
+  Strength:  85.0 | Moves: 5bar=-66.87% 10bar=-66.27% 20bar=-65.93% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.8200
+  Strength: 100.0 | Moves: 5bar=-69.78% 10bar=-69.23% 20bar=-68.93% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.8300
+  Strength:  85.0 | Moves: 5bar=-69.95% 10bar=-69.40% 20bar=-69.10% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.8400
+  Strength: 100.0 | Moves: 5bar=-70.11% 10bar=-69.57% 20bar=-69.27% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.8000
+  Strength: 100.0 | Moves: 5bar=-69.44% 10bar=-68.89% 20bar=-68.58% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.0200
+  Strength:  95.0 | Moves: 5bar=-72.77% 10bar=-72.28% 20bar=-72.00% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.0600
+  Strength: 100.0 | Moves: 5bar=-73.30% 10bar=-72.82% 20bar=-72.55% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.0200
+  Strength:  95.0 | Moves: 5bar=-72.77% 10bar=-72.28% 20bar=-72.00% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.9800
+  Strength:  80.0 | Moves: 5bar=-72.22% 10bar=-71.72% 20bar=-71.44% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.2500
+  Strength: 100.0 | Moves: 5bar=-75.56% 10bar=-75.11% 20bar=-74.87% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.2750
+  Strength: 100.0 | Moves: 5bar=-75.82% 10bar=-75.38% 20bar=-75.14% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.5800
+  Strength: 100.0 | Moves: 5bar=-78.68% 10bar=-78.29% 20bar=-78.08% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.4700
+  Strength: 100.0 | Moves: 5bar=-77.73% 10bar=-77.33% 20bar=-77.11% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.6800
+  Strength:  75.0 | Moves: 5bar=-79.48% 10bar=-79.10% 20bar=-78.90% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.7300
+  Strength:  85.0 | Moves: 5bar=-79.85% 10bar=-79.49% 20bar=-79.29% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.2700
+  Strength: 100.0 | Moves: 5bar=-83.18% 10bar=-82.87% 20bar=-82.71% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $4.2100
+  Strength:  95.0 | Moves: 5bar=-86.94% 10bar=-86.70% 20bar=-86.57% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.3500
+  Strength: 100.0 | Moves: 5bar=-83.58% 10bar=-83.28% 20bar=-83.12% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $4.1200
+  Strength:  85.0 | Moves: 5bar=-86.65% 10bar=-86.41% 20bar=-86.27% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $4.2400
+  Strength: 100.0 | Moves: 5bar=-87.03% 10bar=-86.79% 20bar=-86.66% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $4.2900
+  Strength: 100.0 | Moves: 5bar=-87.18% 10bar=-86.95% 20bar=-86.82% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $4.4100
+  Strength:  95.0 | Moves: 5bar=-87.53% 10bar=-87.30% 20bar=-87.18% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $5.2300
+  Strength:  95.0 | Moves: 5bar=-89.48% 10bar=-89.29% 20bar=-89.19% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.6200
+  Strength: 100.0 | Moves: 5bar=-91.69% 10bar=-91.54% 20bar=-91.46% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.6600
+  Strength: 100.0 | Moves: 5bar=-91.74% 10bar=-91.59% 20bar=-91.51% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.8900
+  Strength: 100.0 | Moves: 5bar=-92.02% 10bar=-91.87% 20bar=-91.79% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $7.0100
+  Strength: 100.0 | Moves: 5bar=-92.15% 10bar=-92.01% 20bar=-91.93% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.2300
+  Strength: 100.0 | Moves: 5bar=-91.17% 10bar=-91.01% 20bar=-90.92% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $5.8200
+  Strength: 100.0 | Moves: 5bar=-90.55% 10bar=-90.38% 20bar=-90.28% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $5.9600
+  Strength:  95.0 | Moves: 5bar=-90.77% 10bar=-90.60% 20bar=-90.51% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.3400
+  Strength:  95.0 | Moves: 5bar=-91.32% 10bar=-91.17% 20bar=-91.08% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.6000
+  Strength: 100.0 | Moves: 5bar=-91.67% 10bar=-91.52% 20bar=-91.43% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $5.2100
+  Strength: 100.0 | Moves: 5bar=-89.44% 10bar=-89.25% 20bar=-89.15% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $5.3700
+  Strength:  85.0 | Moves: 5bar=-89.76% 10bar=-89.57% 20bar=-89.47% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $6.3700
+  Strength: 100.0 | Moves: 5bar=-91.37% 10bar=-91.21% 20bar=-91.12% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.6100
+  Strength: 100.0 | Moves: 5bar=-84.76% 10bar=-84.49% 20bar=-84.34% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.8000
+  Strength: 100.0 | Moves: 5bar=-85.53% 10bar=-85.26% 20bar=-85.12% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.6700
+  Strength:  85.0 | Moves: 5bar=-85.01% 10bar=-84.74% 20bar=-84.59% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.7100
+  Strength: 100.0 | Moves: 5bar=-85.18% 10bar=-84.91% 20bar=-84.76% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.4500
+  Strength: 100.0 | Moves: 5bar=-84.06% 10bar=-83.77% 20bar=-83.61% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.2600
+  Strength: 100.0 | Moves: 5bar=-83.13% 10bar=-82.82% 20bar=-82.65% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.0500
+  Strength: 100.0 | Moves: 5bar=-81.97% 10bar=-81.64% 20bar=-81.46% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.0000
+  Strength: 100.0 | Moves: 5bar=-81.67% 10bar=-81.33% 20bar=-81.15% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.5200
+  Strength: 100.0 | Moves: 5bar=-78.17% 10bar=-77.78% 20bar=-77.56% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.0900
+  Strength:  95.0 | Moves: 5bar=-82.20% 10bar=-81.88% 20bar=-81.70% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.1000
+  Strength:  90.0 | Moves: 5bar=-82.26% 10bar=-81.94% 20bar=-81.76% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8100
+  Strength: 100.0 | Moves: 5bar=-80.43% 10bar=-80.07% 20bar=-79.88% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8500
+  Strength:  95.0 | Moves: 5bar=-80.70% 10bar=-80.35% 20bar=-80.16% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.6400
+  Strength: 100.0 | Moves: 5bar=-79.17% 10bar=-78.79% 20bar=-78.58% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.7100
+  Strength: 100.0 | Moves: 5bar=-79.70% 10bar=-79.34% 20bar=-79.13% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9100
+  Strength:  75.0 | Moves: 5bar=-81.10% 10bar=-80.76% 20bar=-80.57% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8200
+  Strength: 100.0 | Moves: 5bar=-80.50% 10bar=-80.14% 20bar=-79.95% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8300
+  Strength:  90.0 | Moves: 5bar=-80.57% 10bar=-80.21% 20bar=-80.02% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.6800
+  Strength: 100.0 | Moves: 5bar=-79.48% 10bar=-79.10% 20bar=-78.90% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.7700
+  Strength: 100.0 | Moves: 5bar=-80.14% 10bar=-79.78% 20bar=-79.58% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8500
+  Strength: 100.0 | Moves: 5bar=-80.70% 10bar=-80.35% 20bar=-80.16% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8600
+  Strength:  95.0 | Moves: 5bar=-80.77% 10bar=-80.42% 20bar=-80.23% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.0300
+  Strength:  85.0 | Moves: 5bar=-81.85% 10bar=-81.52% 20bar=-81.34% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.2300
+  Strength: 100.0 | Moves: 5bar=-82.97% 10bar=-82.66% 20bar=-82.49% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.4350
+  Strength: 100.0 | Moves: 5bar=-83.99% 10bar=-83.70% 20bar=-83.54% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8700
+  Strength:  95.0 | Moves: 5bar=-80.84% 10bar=-80.49% 20bar=-80.30% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8100
+  Strength:  95.0 | Moves: 5bar=-80.43% 10bar=-80.07% 20bar=-79.88% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.8000
+  Strength:  85.0 | Moves: 5bar=-80.36% 10bar=-80.00% 20bar=-79.80% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9900
+  Strength: 100.0 | Moves: 5bar=-81.61% 10bar=-81.27% 20bar=-81.09% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9800
+  Strength:  75.0 | Moves: 5bar=-81.54% 10bar=-81.21% 20bar=-81.02% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9200
+  Strength:  85.0 | Moves: 5bar=-81.16% 10bar=-80.82% 20bar=-80.63% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.0300
+  Strength: 100.0 | Moves: 5bar=-81.85% 10bar=-81.52% 20bar=-81.34% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.2100
+  Strength: 100.0 | Moves: 5bar=-82.87% 10bar=-82.55% 20bar=-82.38% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9000
+  Strength: 100.0 | Moves: 5bar=-81.03% 10bar=-80.69% 20bar=-80.50% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $3.0500
+  Strength: 100.0 | Moves: 5bar=-81.97% 10bar=-81.64% 20bar=-81.46% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9400
+  Strength: 100.0 | Moves: 5bar=-81.29% 10bar=-80.95% 20bar=-80.77% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.9000
+  Strength: 100.0 | Moves: 5bar=-81.03% 10bar=-80.69% 20bar=-80.50% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.5300
+  Strength: 100.0 | Moves: 5bar=-78.26% 10bar=-77.87% 20bar=-77.65% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.2500
+  Strength: 100.0 | Moves: 5bar=-75.56% 10bar=-75.11% 20bar=-74.87% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.3350
+  Strength: 100.0 | Moves: 5bar=-76.45% 10bar=-76.02% 20bar=-75.78% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.0800
+  Strength: 100.0 | Moves: 5bar=-73.56% 10bar=-73.08% 20bar=-72.81% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.0300
+  Strength:  90.0 | Moves: 5bar=-72.91% 10bar=-72.41% 20bar=-72.14% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $2.0000
+  Strength:  85.0 | Moves: 5bar=-72.50% 10bar=-72.00% 20bar=-71.72% ✓
+Bar   11 | 2025-10-17T03:21:00+00:00 | bos_bearish    @ $1.9900
+  Strength:  90.0 | Moves: 5bar=-72.36% 10bar=-71.86% 20bar=-71.58% ✓
+Bar   17 | 2025-10-17T03:49:00+00:00 | choch_bullish  @ $0.5655
+  Strength:  90.0 | Moves: 5bar=    N/A 10bar= +0.27% 20bar= -2.74% ✓
+Bar   17 | 2025-10-17T03:49:00+00:00 | choch_bullish  @ $0.5641
+  Strength:  90.0 | Moves: 5bar= +0.25% 10bar= +0.51% 20bar= -2.50% ✓
+Bar   71 | 2025-10-17T06:06:00+00:00 | bos_bearish    @ $0.5348
+  Strength: 100.0 | Moves: 5bar= -1.08% 10bar= +2.66% 20bar= -1.25% ✗
+Bar   72 | 2025-10-17T06:07:00+00:00 | bos_bearish    @ $0.5226
+  Strength: 100.0 | Moves: 5bar= +4.40% 10bar= +5.05% 20bar= +1.42% ✗
+Bar  109 | 2025-10-17T07:25:00+00:00 | choch_bullish  @ $0.5786
+  Strength: 100.0 | Moves: 5bar= +1.76% 10bar= +2.30% 20bar= +2.14% ✓
+Bar  186 | 2025-10-17T08:51:00+00:00 | choch_bullish  @ $0.6248
+  Strength: 100.0 | Moves: 5bar= +2.50% 10bar= +0.51% 20bar= +0.61% ✓
+Bar  187 | 2025-10-17T08:52:00+00:00 | choch_bullish  @ $0.6546
+  Strength:  90.0 | Moves: 5bar= -4.98% 10bar= -3.06% 20bar= -3.82% ✗
+Bar  210 | 2025-10-17T09:15:00+00:00 | choch_bullish  @ $0.6599
+  Strength: 100.0 | Moves: 5bar= +7.40% 10bar=+10.94% 20bar= +1.18% ✓
+Bar  210 | 2025-10-17T09:15:00+00:00 | choch_bullish  @ $0.6645
+  Strength:  90.0 | Moves: 5bar= +6.65% 10bar=+10.17% 20bar= +0.48% ✓
+Bar  210 | 2025-10-17T09:15:00+00:00 | choch_bullish  @ $0.6650
+  Strength:  90.0 | Moves: 5bar= +6.57% 10bar=+10.09% 20bar= +0.41% ✓
+Bar  210 | 2025-10-17T09:15:00+00:00 | choch_bullish  @ $0.6669
+  Strength:  90.0 | Moves: 5bar= +6.27% 10bar= +9.78% 20bar= +0.12% ✓
+Bar  210 | 2025-10-17T09:15:00+00:00 | choch_bullish  @ $0.6675
+  Strength:  90.0 | Moves: 5bar= +6.17% 10bar= +9.68% 20bar= +0.03% ✓
+Bar  210 | 2025-10-17T09:15:00+00:00 | choch_bullish  @ $0.6600
+  Strength:  90.0 | Moves: 5bar= +7.38% 10bar=+10.92% 20bar= +1.17% ✓
+Bar  211 | 2025-10-17T09:16:00+00:00 | choch_bullish  @ $0.6700
+  Strength:  80.0 | Moves: 5bar= +8.51% 10bar=+11.73% 20bar= +0.58% ✓
+Bar  212 | 2025-10-17T09:17:00+00:00 | choch_bullish  @ $0.6806
+  Strength:  80.0 | Moves: 5bar= +4.75% 10bar= +4.35% 20bar= +1.47% ✓
+Bar  213 | 2025-10-17T09:18:00+00:00 | choch_bullish  @ $0.6853
+  Strength:  75.0 | Moves: 5bar= +6.45% 10bar= +0.60% 20bar= +1.61% ✓
+Bar  215 | 2025-10-17T09:20:00+00:00 | choch_bullish  @ $0.7000
+  Strength:  90.0 | Moves: 5bar= +4.59% 10bar= -3.31% 20bar= +1.79% ✗
+Bar  216 | 2025-10-17T09:21:00+00:00 | choch_bullish  @ $0.7250
+  Strength:  90.0 | Moves: 5bar= +3.26% 10bar= -6.23% 20bar= -4.52% ✗
+Bar  216 | 2025-10-17T09:21:00+00:00 | choch_bullish  @ $0.7291
+  Strength:  65.0 | Moves: 5bar= +2.67% 10bar= -6.76% 20bar= -5.06% ✗
+Bar  736 | 2025-10-20T03:00:00+00:00 | choch_bullish  @ $0.7529
+  Strength: 100.0 | Moves: 5bar=+39.46% 10bar=+43.45% 20bar=+38.13% ✓
+Bar  736 | 2025-10-20T03:00:00+00:00 | choch_bullish  @ $0.9760
+  Strength:  90.0 | Moves: 5bar= +7.58% 10bar=+10.66% 20bar= +6.56% ✓
+Bar  736 | 2025-10-20T03:00:00+00:00 | choch_bullish  @ $0.9851
+  Strength:  90.0 | Moves: 5bar= +6.59% 10bar= +9.63% 20bar= +5.57% ✓
+Bar  737 | 2025-10-20T03:01:00+00:00 | choch_bullish  @ $1.2000
+  Strength:  90.0 | Moves: 5bar=-11.67% 10bar=-10.83% 20bar=-11.67% ✗
+Bar  737 | 2025-10-20T03:01:00+00:00 | choch_bullish  @ $1.0800
+  Strength:  90.0 | Moves: 5bar= -1.85% 10bar= -0.93% 20bar= -1.85% ✗
+Bar  737 | 2025-10-20T03:01:00+00:00 | choch_bullish  @ $1.0700
+  Strength:  85.0 | Moves: 5bar= -0.93% 10bar=    N/A 20bar= -0.93% ✗
+Bar  737 | 2025-10-20T03:01:00+00:00 | choch_bullish  @ $1.0500
+  Strength:  75.0 | Moves: 5bar= +0.95% 10bar= +1.90% 20bar= +0.95% ✓
+Bar  737 | 2025-10-20T03:01:00+00:00 | choch_bullish  @ $1.1500
+  Strength:  90.0 | Moves: 5bar= -7.83% 10bar= -6.96% 20bar= -7.83% ✗
+Bar  737 | 2025-10-20T03:01:00+00:00 | choch_bullish  @ $1.2000
+  Strength:  90.0 | Moves: 5bar=-11.67% 10bar=-10.83% 20bar=-11.67% ✗
+Bar 1255 | 2025-10-20T11:54:00+00:00 | choch_bullish  @ $1.2400
+  Strength: 100.0 | Moves: 5bar= -4.44% 10bar= -6.05% 20bar= -2.82% ✗
+Bar 1300 | 2025-10-20T12:39:00+00:00 | choch_bullish  @ $1.3800
+  Strength:  65.0 | Moves: 5bar= -2.17% 10bar= -2.54% 20bar= +5.80% ✗
+Bar 1314 | 2025-10-20T12:53:00+00:00 | choch_bullish  @ $1.3900
+  Strength:  75.0 | Moves: 5bar= +8.99% 10bar= +5.76% 20bar= +6.12% ✓
+Bar 1316 | 2025-10-20T12:55:00+00:00 | choch_bullish  @ $1.4600
+  Strength:  90.0 | Moves: 5bar= -1.71% 10bar= +0.68% 20bar= -1.03% ✓
+Bar 1319 | 2025-10-20T12:58:00+00:00 | choch_bullish  @ $1.5200
+  Strength:  90.0 | Moves: 5bar= -3.29% 10bar= -5.59% 20bar=-11.18% ✗
+Bar 1458 | 2025-10-20T15:17:00+00:00 | choch_bullish  @ $1.5700
+  Strength:  85.0 | Moves: 5bar= -1.27% 10bar= -3.18% 20bar= -6.37% ✗
+Bar 1576 | 2025-10-20T17:31:00+00:00 | choch_bullish  @ $1.5900
+  Strength: 100.0 | Moves: 5bar= +5.03% 10bar= +4.40% 20bar= +6.29% ✓
+Bar 1680 | 2025-10-21T03:18:00+00:00 | choch_bullish  @ $1.9300
+  Strength:  65.0 | Moves: 5bar= +2.07% 10bar= +1.55% 20bar= -3.11% ✓
+Bar 1681 | 2025-10-21T03:19:00+00:00 | choch_bullish  @ $1.9400
+  Strength:  85.0 | Moves: 5bar= +1.55% 10bar= +3.09% 20bar= -0.52% ✓
+Bar 1691 | 2025-10-21T03:29:00+00:00 | choch_bullish  @ $1.9900
+  Strength:  90.0 | Moves: 5bar= -1.01% 10bar= -3.02% 20bar= -6.53% ✗
+Bar 1884 | 2025-10-21T06:49:00+00:00 | choch_bullish  @ $2.0400
+  Strength: 100.0 | Moves: 5bar= +7.35% 10bar= +2.45% 20bar=    N/A ✓
+Bar 1889 | 2025-10-21T06:54:00+00:00 | choch_bullish  @ $2.1700
+  Strength:  75.0 | Moves: 5bar= -3.69% 10bar= -4.61% 20bar= -2.76% ✗
+Bar 1915 | 2025-10-21T07:20:00+00:00 | choch_bullish  @ $2.2000
+  Strength: 100.0 | Moves: 5bar= -0.45% 10bar= -1.36% 20bar= +2.27% ✗
+Bar 1919 | 2025-10-21T07:24:00+00:00 | choch_bullish  @ $2.2350
+  Strength:  90.0 | Moves: 5bar= -2.01% 10bar= -1.12% 20bar= -3.80% ✗
+Bar 1970 | 2025-10-21T08:15:00+00:00 | choch_bullish  @ $2.3750
+  Strength:  70.0 | Moves: 5bar= +4.00% 10bar= -1.05% 20bar= -1.47% ✗
+Bar 1970 | 2025-10-21T08:15:00+00:00 | choch_bullish  @ $2.4500
+  Strength:  90.0 | Moves: 5bar= +0.82% 10bar= -4.08% 20bar= -4.49% ✗
+Bar 1970 | 2025-10-21T08:15:00+00:00 | choch_bullish  @ $2.3600
+  Strength:  75.0 | Moves: 5bar= +4.66% 10bar= -0.42% 20bar= -0.85% ✗
+Bar 1970 | 2025-10-21T08:15:00+00:00 | choch_bullish  @ $2.3850
+  Strength:  80.0 | Moves: 5bar= +3.56% 10bar= -1.47% 20bar= -1.89% ✗
+Bar 1970 | 2025-10-21T08:15:00+00:00 | choch_bullish  @ $2.3300
+  Strength:  65.0 | Moves: 5bar= +6.01% 10bar= +0.86% 20bar= +0.43% ✓
+Bar 1975 | 2025-10-21T08:20:00+00:00 | choch_bullish  @ $2.4800
+  Strength:  85.0 | Moves: 5bar= -5.24% 10bar=-13.10% 20bar= -5.24% ✗
+Bar 2163 | 2025-10-21T11:28:00+00:00 | choch_bullish  @ $2.5000
+  Strength: 100.0 | Moves: 5bar= +6.40% 10bar= +9.80% 20bar= +7.40% ✓
+Bar 2163 | 2025-10-21T11:28:00+00:00 | choch_bullish  @ $2.5300
+  Strength:  75.0 | Moves: 5bar= +5.14% 10bar= +8.50% 20bar= +6.13% ✓
+Bar 2173 | 2025-10-21T11:38:00+00:00 | choch_bullish  @ $2.7200
+  Strength:  90.0 | Moves: 5bar= -2.76% 10bar= -1.29% 20bar= +6.62% ✗
+Bar 2173 | 2025-10-21T11:38:00+00:00 | choch_bullish  @ $2.7200
+  Strength:  90.0 | Moves: 5bar= -2.76% 10bar= -1.29% 20bar= +6.62% ✗
+Bar 2192 | 2025-10-21T11:57:00+00:00 | choch_bullish  @ $2.7900
+  Strength: 100.0 | Moves: 5bar= +1.61% 10bar= +1.25% 20bar= -3.58% ✓
+Bar 2193 | 2025-10-21T11:58:00+00:00 | choch_bullish  @ $2.8500
+  Strength:  90.0 | Moves: 5bar= -1.93% 10bar= +0.18% 20bar= -4.74% ✓
+Bar 2193 | 2025-10-21T11:58:00+00:00 | choch_bullish  @ $2.9000
+  Strength:  85.0 | Moves: 5bar= -3.62% 10bar= -1.55% 20bar= -6.38% ✗
+Bar 2193 | 2025-10-21T11:58:00+00:00 | choch_bullish  @ $2.9050
+  Strength:  85.0 | Moves: 5bar= -3.79% 10bar= -1.72% 20bar= -6.54% ✗
+Bar 2281 | 2025-10-21T13:26:00+00:00 | choch_bullish  @ $2.9250
+  Strength: 100.0 | Moves: 5bar= -4.10% 10bar= -2.56% 20bar= -3.42% ✗
+Bar 2291 | 2025-10-21T13:36:00+00:00 | choch_bullish  @ $2.9500
+  Strength:  65.0 | Moves: 5bar= -5.93% 10bar= -4.24% 20bar= +3.39% ✗
+Bar 2291 | 2025-10-21T13:36:00+00:00 | choch_bullish  @ $2.9600
+  Strength:  85.0 | Moves: 5bar= -6.25% 10bar= -4.56% 20bar= +3.04% ✗
+Bar 2308 | 2025-10-21T13:53:00+00:00 | choch_bullish  @ $2.9700
+  Strength: 100.0 | Moves: 5bar= +4.21% 10bar= +8.42% 20bar=+16.16% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $2.9900
+  Strength:  75.0 | Moves: 5bar= +4.68% 10bar= +5.69% 20bar=+20.40% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $3.0700
+  Strength:  90.0 | Moves: 5bar= +1.95% 10bar= +2.93% 20bar=+17.26% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $3.0000
+  Strength:  75.0 | Moves: 5bar= +4.33% 10bar= +5.33% 20bar=+20.00% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $3.0200
+  Strength:  90.0 | Moves: 5bar= +3.64% 10bar= +4.64% 20bar=+19.21% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $3.0000
+  Strength:  90.0 | Moves: 5bar= +4.33% 10bar= +5.33% 20bar=+20.00% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $3.0900
+  Strength:  75.0 | Moves: 5bar= +1.29% 10bar= +2.27% 20bar=+16.50% ✓
+Bar 2309 | 2025-10-21T13:54:00+00:00 | choch_bullish  @ $3.0900
+  Strength:  90.0 | Moves: 5bar= +1.29% 10bar= +2.27% 20bar=+16.50% ✓
+Bar 2312 | 2025-10-21T13:57:00+00:00 | choch_bullish  @ $3.1200
+  Strength:  80.0 | Moves: 5bar= +4.17% 10bar= +3.85% 20bar=+13.30% ✓
+Bar 2312 | 2025-10-21T13:57:00+00:00 | choch_bullish  @ $3.1100
+  Strength:  80.0 | Moves: 5bar= +4.50% 10bar= +4.18% 20bar=+13.67% ✓
+Bar 2312 | 2025-10-21T13:57:00+00:00 | choch_bullish  @ $3.1300
+  Strength:  65.0 | Moves: 5bar= +3.83% 10bar= +3.51% 20bar=+12.94% ✓
+Bar 2314 | 2025-10-21T13:59:00+00:00 | choch_bullish  @ $3.1400
+  Strength:  90.0 | Moves: 5bar= +0.64% 10bar= +4.46% 20bar=+13.38% ✓
+Bar 2315 | 2025-10-21T14:00:00+00:00 | choch_bullish  @ $3.1500
+  Strength:  90.0 | Moves: 5bar=    N/A 10bar= +7.14% 20bar=+10.48% ✓
+Bar 2315 | 2025-10-21T14:00:00+00:00 | choch_bullish  @ $3.1500
+  Strength:  75.0 | Moves: 5bar=    N/A 10bar= +7.14% 20bar=+10.48% ✓
+Bar 2317 | 2025-10-21T14:02:00+00:00 | choch_bullish  @ $3.2400
+  Strength:  75.0 | Moves: 5bar=    N/A 10bar= +4.01% 20bar= +8.64% ✓
+Bar 2317 | 2025-10-21T14:02:00+00:00 | choch_bullish  @ $3.2300
+  Strength:  90.0 | Moves: 5bar= +0.31% 10bar= +4.33% 20bar= +8.98% ✓
+Bar 2318 | 2025-10-21T14:03:00+00:00 | choch_bullish  @ $3.2550
+  Strength:  90.0 | Moves: 5bar=    N/A 10bar= +5.99% 20bar= +5.68% ✓
+Bar 2318 | 2025-10-21T14:03:00+00:00 | choch_bullish  @ $3.2700
+  Strength:  75.0 | Moves: 5bar= -0.46% 10bar= +5.50% 20bar= +5.20% ✓
+Bar 2324 | 2025-10-21T14:09:00+00:00 | choch_bullish  @ $3.3100
+  Strength:  90.0 | Moves: 5bar= +8.76% 10bar= +7.55% 20bar= +7.40% ✓
+Bar 2324 | 2025-10-21T14:09:00+00:00 | choch_bullish  @ $3.3100
+  Strength:  90.0 | Moves: 5bar= +8.76% 10bar= +7.55% 20bar= +7.40% ✓
+Bar 2326 | 2025-10-21T14:11:00+00:00 | choch_bullish  @ $3.4600
+  Strength:  90.0 | Moves: 5bar= +5.92% 10bar= +1.59% 20bar= +4.48% ✓
+Bar 2326 | 2025-10-21T14:11:00+00:00 | choch_bullish  @ $3.4700
+  Strength:  75.0 | Moves: 5bar= +5.62% 10bar= +1.30% 20bar= +4.18% ✓
+Bar 2326 | 2025-10-21T14:11:00+00:00 | choch_bullish  @ $3.4000
+  Strength:  85.0 | Moves: 5bar= +7.79% 10bar= +3.38% 20bar= +6.32% ✓
+Bar 2326 | 2025-10-21T14:11:00+00:00 | choch_bullish  @ $3.4000
+  Strength:  65.0 | Moves: 5bar= +7.79% 10bar= +3.38% 20bar= +6.32% ✓
+Bar 2329 | 2025-10-21T14:14:00+00:00 | choch_bullish  @ $3.6500
+  Strength:  90.0 | Moves: 5bar= -2.47% 10bar= -7.12% 20bar= -3.84% ✗
+Bar 2330 | 2025-10-21T14:15:00+00:00 | choch_bullish  @ $3.7200
+  Strength:  85.0 | Moves: 5bar= -6.45% 10bar= -5.51% 20bar= -5.51% ✗
+Bar 2330 | 2025-10-21T14:15:00+00:00 | choch_bullish  @ $3.6800
+  Strength:  75.0 | Moves: 5bar= -5.43% 10bar= -4.48% 20bar= -4.48% ✗
+Bar 2330 | 2025-10-21T14:15:00+00:00 | choch_bullish  @ $3.7250
+  Strength:  85.0 | Moves: 5bar= -6.58% 10bar= -5.64% 20bar= -5.64% ✗
+Bar 2370 | 2025-10-21T14:55:00+00:00 | choch_bullish  @ $3.8400
+  Strength: 100.0 | Moves: 5bar= -2.08% 10bar= -1.30% 20bar= +2.08% ✗
+Bar 2382 | 2025-10-21T15:07:00+00:00 | choch_bullish  @ $3.8600
+  Strength: 100.0 | Moves: 5bar= +1.81% 10bar= +4.40% 20bar=+21.50% ✓
+Bar 2390 | 2025-10-21T15:15:00+00:00 | choch_bullish  @ $4.0000
+  Strength:  90.0 | Moves: 5bar= +9.75% 10bar=+11.25% 20bar=+12.00% ✓
+Bar 2390 | 2025-10-21T15:15:00+00:00 | choch_bullish  @ $4.0500
+  Strength:  75.0 | Moves: 5bar= +8.40% 10bar= +9.88% 20bar=+10.62% ✓
+Bar 2394 | 2025-10-21T15:19:00+00:00 | choch_bullish  @ $4.2300
+  Strength:  90.0 | Moves: 5bar= +4.02% 10bar=+11.11% 20bar= +3.07% ✓
+Bar 2394 | 2025-10-21T15:19:00+00:00 | choch_bullish  @ $4.1900
+  Strength:  75.0 | Moves: 5bar= +5.01% 10bar=+12.17% 20bar= +4.06% ✓
+Bar 2401 | 2025-10-21T15:26:00+00:00 | choch_bullish  @ $4.5800
+  Strength:  75.0 | Moves: 5bar= -1.09% 10bar= -0.87% 20bar= -3.28% ✗
+Bar 2401 | 2025-10-21T15:26:00+00:00 | choch_bullish  @ $4.5000
+  Strength:  75.0 | Moves: 5bar= +0.67% 10bar= +0.89% 20bar= -1.56% ✓
+Bar 2402 | 2025-10-21T15:27:00+00:00 | choch_bullish  @ $4.6000
+  Strength:  75.0 | Moves: 5bar= -5.65% 10bar= -3.26% 20bar= -4.57% ✗
+Bar 2403 | 2025-10-21T15:28:00+00:00 | choch_bullish  @ $4.7500
+  Strength:  90.0 | Moves: 5bar=-10.95% 10bar= -6.32% 20bar= -6.74% ✗
+Bar 2403 | 2025-10-21T15:28:00+00:00 | choch_bullish  @ $4.7900
+  Strength:  65.0 | Moves: 5bar=-11.69% 10bar= -7.10% 20bar= -7.52% ✗
+Bar 2615 | 2025-10-22T03:00:00+00:00 | choch_bullish  @ $4.8200
+  Strength: 100.0 | Moves: 5bar= +8.51% 10bar= +9.13% 20bar=+12.66% ✓
+Bar 2660 | 2025-10-22T03:45:00+00:00 | choch_bullish  @ $5.5500
+  Strength: 100.0 | Moves: 5bar=+12.79% 10bar=+19.10% 20bar=+16.22% ✓
+Bar 2669 | 2025-10-22T03:54:00+00:00 | choch_bullish  @ $6.4300
+  Strength:  75.0 | Moves: 5bar= +0.93% 10bar= -0.62% 20bar= +7.00% ✗
+Bar 2671 | 2025-10-22T03:56:00+00:00 | choch_bullish  @ $6.7100
+  Strength:  85.0 | Moves: 5bar= -3.13% 10bar= -2.83% 20bar= +0.45% ✗
+Bar 2692 | 2025-10-22T04:17:00+00:00 | choch_bullish  @ $6.9500
+  Strength: 100.0 | Moves: 5bar=+11.08% 10bar=+25.32% 20bar= +8.92% ✓
+Bar 2692 | 2025-10-22T04:17:00+00:00 | choch_bullish  @ $7.0000
+  Strength:  90.0 | Moves: 5bar=+10.29% 10bar=+24.43% 20bar= +8.14% ✓
+Bar 2693 | 2025-10-22T04:18:00+00:00 | choch_bullish  @ $7.3400
+  Strength:  90.0 | Moves: 5bar= +6.40% 10bar=+15.26% 20bar= +6.27% ✓
+Bar 2694 | 2025-10-22T04:19:00+00:00 | choch_bullish  @ $7.5500
+  Strength:  90.0 | Moves: 5bar= +4.77% 10bar=+13.25% 20bar= +4.11% ✓
+Bar 2697 | 2025-10-22T04:22:00+00:00 | choch_bullish  @ $7.6900
+  Strength:  90.0 | Moves: 5bar=+13.26% 10bar=-10.79% 20bar= -3.77% ✗
+Bar 2698 | 2025-10-22T04:23:00+00:00 | choch_bullish  @ $7.8300
+  Strength:  90.0 | Moves: 5bar= +8.05% 10bar= -1.40% 20bar= -4.60% ✗
+
+================================================================================

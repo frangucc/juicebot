@@ -78,7 +78,28 @@ class TradeCommandExecutor:
         """Build regex patterns for trading notation (long/short @ price)."""
         # Pattern: "long 100 @ .57" or "buy 100 @ 12.45"
         # Enhanced: "buy 500", "sell all", "sell half", "sell 50%"
+        # NOTE: More specific patterns (scalein/scaleout) MUST come BEFORE generic patterns (long/short)
         self.patterns = [
+            # Scalein patterns - CHECK THESE FIRST before generic long/short
+            # Scalein with speed: "scalein long 10000 fast" or "scalein short 5000 medium"
+            (re.compile(r'\bscalein\s+(long|short)\s+(\d+)\s+(fast|medium|slow|1|2|3)\b', re.IGNORECASE), '/trade scalein'),
+
+            # Scalein: "scalein long 10000" or "scalein short 5000"
+            (re.compile(r'\bscalein\s+(long|short)\s+(\d+)\b', re.IGNORECASE), '/trade scalein'),
+
+            # Cancel scalein: "cancel scalein" or "scalein cancel"
+            (re.compile(r'\b(cancel|stop)\s+scalein\b', re.IGNORECASE), '/trade cancel-scalein'),
+            (re.compile(r'\bscalein\s+(cancel|stop)\b', re.IGNORECASE), '/trade cancel-scalein'),
+
+            # Scaleout patterns - CHECK THESE BEFORE generic sell/close
+            # Scaleout with speed: "scaleout fast", "scaleout medium", "scaleout slow"
+            (re.compile(r'\bscaleout\s+(fast|medium|slow|1|2|3)\b', re.IGNORECASE), '/trade scaleout'),
+
+            # Cancel scaleout: "cancel scaleout" or "scaleout cancel"
+            (re.compile(r'\b(cancel|stop)\s+scaleout\b', re.IGNORECASE), '/trade cancel-scaleout'),
+            (re.compile(r'\bscaleout\s+(cancel|stop)\b', re.IGNORECASE), '/trade cancel-scaleout'),
+
+            # Generic entry/exit patterns - THESE COME LAST
             # With explicit price: "long 100 @ .57" (allow .57 without leading zero)
             (re.compile(r'\b(long|buy)\s+(\d+)\s*@\s*[\$]?(\d*\.?\d+)', re.IGNORECASE), '/trade long'),
             (re.compile(r'\b(short|sell)\s+(\d+)\s*@\s*[\$]?(\d*\.?\d+)', re.IGNORECASE), '/trade short'),
@@ -96,13 +117,6 @@ class TradeCommandExecutor:
             (re.compile(r'\b(sell|close)\s+(half|50%)\b', re.IGNORECASE), '/trade scaleout'),
             (re.compile(r'\b(sell|close)\s+(\d+)%', re.IGNORECASE), '/trade scaleout'),
             (re.compile(r'\b(sell|close)\s+(\d+)\b', re.IGNORECASE), '/trade scaleout'),
-
-            # Scaleout with speed: "scaleout fast", "scaleout medium", "scaleout slow"
-            (re.compile(r'\bscaleout\s+(fast|medium|slow|1|2|3)\b', re.IGNORECASE), '/trade scaleout'),
-
-            # Cancel scaleout: "cancel scaleout" or "scaleout cancel"
-            (re.compile(r'\b(cancel|stop)\s+scaleout\b', re.IGNORECASE), '/trade cancel-scaleout'),
-            (re.compile(r'\bscaleout\s+(cancel|stop)\b', re.IGNORECASE), '/trade cancel-scaleout'),
         ]
 
     def reload_commands(self):
@@ -152,6 +166,19 @@ class TradeCommandExecutor:
             if match:
                 # Extract parameters from pattern
                 params = {'action': match.group(1).lower() if match.lastindex >= 1 else 'scaleout'}
+
+                # Special case: scalein with side and quantity (group 1 = side, group 2 = quantity)
+                if 'scalein' in message.lower() and match.lastindex >= 2:
+                    side_str = match.group(1).lower()
+                    if side_str in ['long', 'short']:
+                        params['side'] = side_str
+                        params['quantity'] = int(match.group(2))
+                        # Check if there's a speed (group 3)
+                        if match.lastindex >= 3:
+                            speed_str = match.group(3).lower()
+                            if speed_str in ['fast', 'medium', 'slow', '1', '2', '3']:
+                                params['speed'] = speed_str
+                        return (command, params)
 
                 # Special case: scaleout with speed (group 1 is the speed)
                 if 'scaleout' in message.lower() and match.lastindex >= 1:
@@ -469,6 +496,90 @@ class TradeCommandExecutor:
         return result
 
     # ------------------------------------------------------------------------
+    # Scalein Commands
+    # ------------------------------------------------------------------------
+
+    async def initiate_scalein(self, symbol: str, params: Dict) -> str:
+        """Handler for /trade scalein - Gradual position entry."""
+        # Get position to validate
+        position = self.position_storage.get_open_position(symbol)
+
+        # Extract side and quantity from params
+        side = params.get('side')
+        quantity = params.get('quantity')
+        speed = params.get('speed')
+
+        if not side:
+            return "⚠️ Must specify side (long/short) for scalein"
+
+        if not quantity or quantity <= 0:
+            return "⚠️ Must specify positive quantity for scalein"
+
+        # If speed was provided inline (e.g., "scalein long 10000 fast"), execute immediately
+        if speed:
+            # Map numeric inputs to speed names
+            speed_map = {'1': 'fast', '2': 'medium', '3': 'slow'}
+            if speed in speed_map:
+                speed = speed_map[speed]
+
+            if speed in ['fast', 'medium', 'slow']:
+                return await self.execute_scalein_with_speed(symbol, side, quantity, speed)
+            else:
+                return f"⚠️ Invalid speed: {speed}. Use fast, medium, slow, 1, 2, or 3"
+
+        # Otherwise, prompt for speed selection
+        if self.conversation_id:
+            conversation_state.set_state(self.conversation_id, {
+                'command': 'scalein_speed_selection',
+                'symbol': symbol,
+                'side': side,
+                'quantity': quantity
+            })
+
+        return (
+            f"📊 SCALEIN - {side.upper()} {quantity:,} {symbol}\n\n"
+            f"Select speed:\n"
+            f"1️⃣ FAST - 1-3 minutes (6-10 chunks, 10-30s between)\n"
+            f"2️⃣ MEDIUM - 10-15 minutes (8-12 chunks, 1-2min between)\n"
+            f"3️⃣ SLOW - ~60 minutes (10-15 chunks, 4-8min between)\n\n"
+            f"Reply with 1, 2, or 3 to begin\n"
+            f"📊 Progress updates will appear automatically in chat"
+        )
+
+    async def execute_scalein_with_speed(self, symbol: str, side: str, quantity: int, speed: str) -> str:
+        """Execute scalein after user selects speed (1, 2, or 3)."""
+        from scalein_worker import ScaleinWorker
+
+        worker = ScaleinWorker(user_id=self.user_id)
+        worker.update_market_data(symbol, self.market_data.get(symbol, {}))
+
+        result = await worker.start_scalein(
+            symbol=symbol,
+            side=side,
+            speed=speed,
+            quantity=quantity
+        )
+
+        # Clear conversation state
+        if self.conversation_id:
+            conversation_state.clear_state(self.conversation_id)
+
+        return result
+
+    async def cancel_scalein_handler(self, symbol: str, params: Dict) -> str:
+        """Handler for /trade cancel-scalein - Stop active scalein."""
+        from scalein_worker import ScaleinWorker
+
+        worker = ScaleinWorker(user_id=self.user_id)
+        result = await worker.cancel_scalein(symbol)
+
+        # Clear any conversation state
+        if self.conversation_id:
+            conversation_state.clear_state(self.conversation_id)
+
+        return result
+
+    # ------------------------------------------------------------------------
     # Reversal Commands
     # ------------------------------------------------------------------------
 
@@ -661,13 +772,13 @@ class TradeCommandExecutor:
         position = self.position_storage.get_open_position(symbol)
 
         if not position:
-            # No open position - show session P&L only
-            # TODO: Query all closed trades for session P&L
+            # No open position - show session P&L from closed trades
+            session_pnl = self.position_storage.get_session_pnl(symbol)
             return (
                 f"💰 P&L SUMMARY - {symbol}\n"
                 f"Open Position: FLAT\n"
-                f"Session P&L: $0.00\n"
-                f"Master P&L: $0.00"
+                f"Session P&L: ${session_pnl:+.2f}\n"
+                f"Master P&L: ${session_pnl:+.2f}"
             )
 
         # Calculate unrealized P&L

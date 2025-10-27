@@ -6,6 +6,7 @@ Runs on port 8002.
 """
 
 import os
+import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -613,6 +614,28 @@ async def cancel_scaleout(symbol: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error cancelling scaleout: {str(e)}")
+
+
+@app.post("/scalein/{symbol}/cancel")
+async def cancel_scalein(symbol: str):
+    """Cancel active scalein for a symbol."""
+    from event_bus import event_bus
+
+    try:
+        cancelled = event_bus.cancel_task(symbol, "scalein")
+
+        if cancelled:
+            # Publish cancellation event
+            await event_bus.publish(symbol, {
+                "type": "scalein_cancelled",
+                "message": "⚠️ SCALEIN CANCELLED BY USER"
+            })
+            return {"success": True, "message": "Scalein cancelled"}
+        else:
+            return {"success": False, "message": "No active scalein found"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error cancelling scalein: {str(e)}")
 
 
 @app.get("/events/{symbol}")

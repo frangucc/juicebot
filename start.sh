@@ -67,8 +67,8 @@ start_service() {
     echo ""
 }
 
-# Start API server
-start_service "api" "uvicorn api.main:app --host 0.0.0.0 --port 8000"
+# Start API server (with 4 workers for WebSocket + HTTP concurrency)
+start_service "api" "uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
 
 # Start AI Service
 start_service "ai-service" "cd ai-service && ../venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002"

@@ -271,3 +271,26 @@ class PositionStorage:
         except Exception as e:
             print(f"Error fetching all positions: {e}")
             return []
+
+    def get_session_pnl(self, symbol: str) -> float:
+        """
+        Get total realized P&L for a symbol from all closed trades.
+        This is the cumulative profit/loss across all completed trades.
+        """
+        try:
+            result = supabase.table('trades').select('realized_pnl').eq(
+                'symbol', symbol
+            ).eq(
+                'status', 'closed'
+            ).execute()
+
+            if not result.data:
+                return 0.0
+
+            # Sum all realized P&L from closed trades
+            total_pnl = sum(trade.get('realized_pnl', 0.0) for trade in result.data)
+            return total_pnl
+
+        except Exception as e:
+            print(f"Error fetching session P&L: {e}")
+            return 0.0
