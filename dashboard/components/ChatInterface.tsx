@@ -381,6 +381,15 @@ export default function ChatInterface({ symbol }: ChatInterfaceProps) {
   const [testResults, setTestResults] = useState<TestResult[]>([])
   const [currentTestPhase, setCurrentTestPhase] = useState<'fast' | 'ai-prompt' | 'ai-running' | 'complete'>('fast')
   const [conversationId, setConversationId] = useState<string>(`conv_${symbol}_${Date.now()}`)
+  const eventsWsRef = useRef<WebSocket | null>(null)
+  const [scaleoutStatus, setScaleoutStatus] = useState<{
+    active: boolean
+    message: string
+    quantity?: number
+    price?: number
+    currentChunk?: number
+    totalChunks?: number
+  } | null>(null)
 
   useEffect(() => {
     setIsMounted(true)
@@ -690,6 +699,114 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
       content: summary
     }])
   }
+
+  // WebSocket connection for real-time server events
+  const connectEventsWebSocket = () => {
+    if (eventsWsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('[EventsWS] Already connected')
+      return
+    }
+
+    console.log('[EventsWS] Connecting to event stream for', symbol)
+
+    const ws = new WebSocket(`ws://localhost:8002/events/${symbol}`)
+    eventsWsRef.current = ws
+
+    ws.onopen = () => {
+      console.log('[EventsWS] ✓ Connected to event stream')
+    }
+
+    ws.onmessage = (messageEvent) => {
+      try {
+        const data = JSON.parse(messageEvent.data)
+
+        // Skip ping messages
+        if (data.type === 'ping') return
+
+        console.log('[EventsWS] Received:', data)
+
+        // Extract the actual event from the wrapper
+        const evt = data.event || data
+
+        console.log('[EventsWS] Processing event:', evt)
+
+        // Update scaleout status bar from events
+        if (evt.type === 'scaleout_start') {
+          setScaleoutStatus({
+            active: true,
+            message: `Starting: ${evt.data?.total_qty || '?'} shares in ${evt.data?.num_chunks || '?'} chunks`,
+            quantity: evt.data?.total_qty,
+            totalChunks: evt.data?.num_chunks
+          })
+        } else if (evt.type === 'scaleout_progress') {
+          setScaleoutStatus({
+            active: true,
+            message: `Chunk ${evt.data?.chunk_num || '?'}/${evt.data?.total_chunks || '?'}`,
+            quantity: evt.data?.remaining_qty,
+            price: evt.data?.price,
+            currentChunk: evt.data?.chunk_num,
+            totalChunks: evt.data?.total_chunks
+          })
+        } else if (evt.type === 'scaleout_complete' || evt.type === 'scaleout_cancelled') {
+          setScaleoutStatus(null)
+          // Close connection after scaleout finishes
+          disconnectEventsWebSocket()
+        }
+
+        // Add event as assistant message if it has content
+        if (evt.message) {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: `event_${Date.now()}_${Math.random()}`,
+              role: 'assistant' as const,
+              content: evt.message
+            }
+          ])
+        }
+      } catch (error) {
+        console.error('[EventsWS] Error parsing message:', error)
+      }
+    }
+
+    ws.onerror = (error) => {
+      console.error('[EventsWS] WebSocket error:', error)
+    }
+
+    ws.onclose = () => {
+      console.log('[EventsWS] Connection closed')
+      eventsWsRef.current = null
+    }
+  }
+
+  const disconnectEventsWebSocket = () => {
+    if (eventsWsRef.current) {
+      console.log('[EventsWS] Disconnecting')
+      eventsWsRef.current.close()
+      eventsWsRef.current = null
+    }
+  }
+
+  const cancelScaleout = async () => {
+    try {
+      const response = await fetch(`http://localhost:8002/scaleout/${symbol}/cancel`, {
+        method: 'POST'
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setScaleoutStatus(null)
+        disconnectEventsWebSocket()
+      }
+    } catch (error) {
+      console.error('Error cancelling scaleout:', error)
+    }
+  }
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => disconnectEventsWebSocket()
+  }, [])
 
   const handleCommandSelect = (command: SlashCommand) => {
     // Build full command path
@@ -1021,6 +1138,15 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
         setTrackingMessageId(assistantMessage.id)
       }
 
+      // Start WebSocket event stream if scaleout was initiated
+      if (data.response && data.response.includes('SCALEOUT INITIATED')) {
+        console.log('[EventsWS] ⚡ SCALEOUT DETECTED - CONNECTING TO EVENT STREAM')
+        console.log('[EventsWS] Response:', data.response)
+        connectEventsWebSocket()
+      } else {
+        console.log('[EventsWS] No scaleout detected in response')
+      }
+
       setLoadingStatus('')
     } catch (error) {
       // Check if it was aborted
@@ -1161,6 +1287,29 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
                 <div className="text-sm opacity-70 mt-1">{cmd.description}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Scaleout Status Bar */}
+        {scaleoutStatus && scaleoutStatus.active && (
+          <div className="h-[40px] bg-green-500/10 backdrop-blur-sm border-t border-green-500/30 flex items-center justify-between px-4 font-mono text-sm">
+            <div className="flex items-center gap-3">
+              <span className="text-green-400">🔄</span>
+              <span className="text-green-300">Scaleout running:</span>
+              <span className="text-white">{scaleoutStatus.message}</span>
+              {scaleoutStatus.quantity && scaleoutStatus.price && (
+                <span className="text-green-400">
+                  {scaleoutStatus.quantity} @ ${scaleoutStatus.price.toFixed(2)}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={cancelScaleout}
+              className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 font-mono text-xs transition-colors"
+              type="button"
+            >
+              CANCEL
+            </button>
           </div>
         )}
 
@@ -1396,3 +1545,4 @@ ${allResults.filter(r => r.status === 'fail').length > 0 ? '\nFailed Tests:\n' +
     </div>
   )
 }
+// Force rebuild $(date)

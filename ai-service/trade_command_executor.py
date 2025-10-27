@@ -99,6 +99,10 @@ class TradeCommandExecutor:
 
             # Scaleout with speed: "scaleout fast", "scaleout medium", "scaleout slow"
             (re.compile(r'\bscaleout\s+(fast|medium|slow|1|2|3)\b', re.IGNORECASE), '/trade scaleout'),
+
+            # Cancel scaleout: "cancel scaleout" or "scaleout cancel"
+            (re.compile(r'\b(cancel|stop)\s+scaleout\b', re.IGNORECASE), '/trade cancel-scaleout'),
+            (re.compile(r'\bscaleout\s+(cancel|stop)\b', re.IGNORECASE), '/trade cancel-scaleout'),
         ]
 
     def reload_commands(self):
@@ -446,6 +450,19 @@ class TradeCommandExecutor:
         result = await worker.start_scaleout(symbol=symbol, speed=speed, quantity=None)
 
         # Clear conversation state
+        if self.conversation_id:
+            conversation_state.clear_state(self.conversation_id)
+
+        return result
+
+    async def cancel_scaleout_handler(self, symbol: str, params: Dict) -> str:
+        """Handler for /trade cancel-scaleout - Stop active scaleout."""
+        from scaleout_worker import ScaleoutWorker
+
+        worker = ScaleoutWorker(user_id=self.user_id)
+        result = await worker.cancel_scaleout(symbol)
+
+        # Clear any conversation state
         if self.conversation_id:
             conversation_state.clear_state(self.conversation_id)
 

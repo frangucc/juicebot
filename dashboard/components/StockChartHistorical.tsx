@@ -73,6 +73,10 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
   const wsRef = useRef<WebSocket | null>(null)
   const activeFVGsRef = useRef<any[]>([]) // Track active FVGs
   const positionLineRef = useRef<any>(null) // Track position price line
+  const bosLinesRef = useRef<any[]>([]) // Track BoS indicator lines
+  const chochLinesRef = useRef<any[]>([]) // Track CHoCH indicator lines
+  const swingHighsRef = useRef<any[]>([]) // Track swing highs for BoS/CHoCH
+  const swingLowsRef = useRef<any[]>([]) // Track swing lows for BoS/CHoCH
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [position, setPosition] = useState<Position | null>(null)
@@ -472,40 +476,49 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                     }
                     console.log(`🔴 Bearish FVG detected at ${new Date(bar3.time * 1000).toISOString()}: ${fvg.bottom.toFixed(4)} - ${fvg.top.toFixed(4)}`)
 
-                    // Draw horizontal lines for the FVG
-                    try {
-                      console.log('  Creating price lines...')
-                      console.log('  Series ref exists?', !!candlestickSeriesRef.current)
-                      console.log('  Series has createPriceLine?', typeof candlestickSeriesRef.current?.createPriceLine)
+                    // Check if FVG overlaps with position entry price
+                    const overlapsPosition = position &&
+                      position.entry_price >= fvg.bottom &&
+                      position.entry_price <= fvg.top
 
-                      const topLine = candlestickSeriesRef.current.createPriceLine({
-                        price: fvg.top,
-                        color: '#EF4444',
-                        lineWidth: 2,
-                        lineStyle: 2, // Dashed
-                        axisLabelVisible: true,
-                        title: 'FVG Top',
-                      })
-                      console.log('  ✓ Top line created:', topLine)
+                    if (overlapsPosition) {
+                      console.log('  ⚠️ FVG overlaps with position marker - skipping FVG to keep position visible')
+                    } else {
+                      // Draw horizontal lines for the FVG
+                      try {
+                        console.log('  Creating price lines...')
+                        console.log('  Series ref exists?', !!candlestickSeriesRef.current)
+                        console.log('  Series has createPriceLine?', typeof candlestickSeriesRef.current?.createPriceLine)
 
-                      const bottomLine = candlestickSeriesRef.current.createPriceLine({
-                        price: fvg.bottom,
-                        color: '#EF4444',
-                        lineWidth: 2,
-                        lineStyle: 2, // Dashed
-                        axisLabelVisible: true,
-                        title: 'FVG Bottom',
-                      })
-                      console.log('  ✓ Bottom line created:', bottomLine)
+                        const topLine = candlestickSeriesRef.current.createPriceLine({
+                          price: fvg.top,
+                          color: '#EF4444',
+                          lineWidth: 2,
+                          lineStyle: 2, // Dashed
+                          axisLabelVisible: true,
+                          title: 'FVG Top',
+                        })
+                        console.log('  ✓ Top line created:', topLine)
 
-                      activeFVGsRef.current.push({
-                        ...fvg,
-                        topLine,
-                        bottomLine
-                      })
-                      console.log(`  ✓ FVG stored, total active: ${activeFVGsRef.current.length}`)
-                    } catch (err) {
-                      console.error('  ✗ Error creating price lines:', err)
+                        const bottomLine = candlestickSeriesRef.current.createPriceLine({
+                          price: fvg.bottom,
+                          color: '#EF4444',
+                          lineWidth: 2,
+                          lineStyle: 2, // Dashed
+                          axisLabelVisible: true,
+                          title: 'FVG Bottom',
+                        })
+                        console.log('  ✓ Bottom line created:', bottomLine)
+
+                        activeFVGsRef.current.push({
+                          ...fvg,
+                          topLine,
+                          bottomLine
+                        })
+                        console.log(`  ✓ FVG stored, total active: ${activeFVGsRef.current.length}`)
+                      } catch (err) {
+                        console.error('  ✗ Error creating price lines:', err)
+                      }
                     }
                   }
 
@@ -520,38 +533,47 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                     }
                     console.log(`🟢 Bullish FVG detected at ${new Date(bar3.time * 1000).toISOString()}: ${fvg.bottom.toFixed(4)} - ${fvg.top.toFixed(4)}`)
 
-                    // Draw horizontal lines for the FVG
-                    try {
-                      console.log('  Creating price lines...')
+                    // Check if FVG overlaps with position entry price
+                    const overlapsPosition = position &&
+                      position.entry_price >= fvg.bottom &&
+                      position.entry_price <= fvg.top
 
-                      const topLine = candlestickSeriesRef.current.createPriceLine({
-                        price: fvg.top,
-                        color: '#10B981',
-                        lineWidth: 2,
-                        lineStyle: 2, // Dashed
-                        axisLabelVisible: true,
-                        title: 'FVG Top',
-                      })
-                      console.log('  ✓ Top line created')
+                    if (overlapsPosition) {
+                      console.log('  ⚠️ FVG overlaps with position marker - skipping FVG to keep position visible')
+                    } else {
+                      // Draw horizontal lines for the FVG
+                      try {
+                        console.log('  Creating price lines...')
 
-                      const bottomLine = candlestickSeriesRef.current.createPriceLine({
-                        price: fvg.bottom,
-                        color: '#10B981',
-                        lineWidth: 2,
-                        lineStyle: 2, // Dashed
-                        axisLabelVisible: true,
-                        title: 'FVG Bottom',
-                      })
-                      console.log('  ✓ Bottom line created')
+                        const topLine = candlestickSeriesRef.current.createPriceLine({
+                          price: fvg.top,
+                          color: '#10B981',
+                          lineWidth: 2,
+                          lineStyle: 2, // Dashed
+                          axisLabelVisible: true,
+                          title: 'FVG Top',
+                        })
+                        console.log('  ✓ Top line created')
 
-                      activeFVGsRef.current.push({
-                        ...fvg,
-                        topLine,
-                        bottomLine
-                      })
-                      console.log(`  ✓ FVG stored, total active: ${activeFVGsRef.current.length}`)
-                    } catch (err) {
-                      console.error('  ✗ Error creating price lines:', err)
+                        const bottomLine = candlestickSeriesRef.current.createPriceLine({
+                          price: fvg.bottom,
+                          color: '#10B981',
+                          lineWidth: 2,
+                          lineStyle: 2, // Dashed
+                          axisLabelVisible: true,
+                          title: 'FVG Bottom',
+                        })
+                        console.log('  ✓ Bottom line created')
+
+                        activeFVGsRef.current.push({
+                          ...fvg,
+                          topLine,
+                          bottomLine
+                        })
+                        console.log(`  ✓ FVG stored, total active: ${activeFVGsRef.current.length}`)
+                      } catch (err) {
+                        console.error('  ✗ Error creating price lines:', err)
+                      }
                     }
                   }
 
@@ -576,6 +598,164 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
                       }
                     }
                   })
+
+                  // Detect BoS and CHoCH - track swing points as they form
+                  if (newData.length >= 20) {
+                    const lookback = 5
+                    const recentBars = newData.slice(-30)
+
+                    // Check if we just formed a new swing high or low
+                    if (recentBars.length > lookback * 2) {
+                      const checkIndex = recentBars.length - lookback - 1 // Check the bar that's now "confirmed"
+                      if (checkIndex >= lookback) {
+                        const bar = recentBars[checkIndex]
+
+                        // Check if this is a confirmed swing high
+                        const isSwingHigh = recentBars.slice(checkIndex - lookback, checkIndex).every(b => b.high < bar.high) &&
+                                            recentBars.slice(checkIndex + 1, checkIndex + lookback + 1).every(b => b.high < bar.high)
+
+                        if (isSwingHigh) {
+                          // Add to swing highs tracking (if not already there)
+                          const alreadyTracked = swingHighsRef.current.find(s => Math.abs(s.price - bar.high) < 0.0001)
+                          if (!alreadyTracked) {
+                            swingHighsRef.current.push({ price: bar.high, time: bar.time, broken: false })
+                            console.log(`📍 Swing High formed at $${bar.high.toFixed(4)}`)
+
+                            // Keep only last 10 swing highs
+                            if (swingHighsRef.current.length > 10) swingHighsRef.current.shift()
+                          }
+                        }
+
+                        // Check if this is a confirmed swing low
+                        const isSwingLow = recentBars.slice(checkIndex - lookback, checkIndex).every(b => b.low > bar.low) &&
+                                           recentBars.slice(checkIndex + 1, checkIndex + lookback + 1).every(b => b.low > bar.low)
+
+                        if (isSwingLow) {
+                          const alreadyTracked = swingLowsRef.current.find(s => Math.abs(s.price - bar.low) < 0.0001)
+                          if (!alreadyTracked) {
+                            swingLowsRef.current.push({ price: bar.low, time: bar.time, broken: false })
+                            console.log(`📍 Swing Low formed at $${bar.low.toFixed(4)}`)
+
+                            if (swingLowsRef.current.length > 10) swingLowsRef.current.shift()
+                          }
+                        }
+                      }
+                    }
+
+                    // Check if current bar breaks any unbroken swing points
+                    // BoS = breaking in direction of trend (making new highs/lows)
+                    // CHoCH = breaking against trend (reversal signal)
+
+                    // Determine trend: more recent swing highs increasing = uptrend
+                    const recentSwingHighs = swingHighsRef.current.slice(-3)
+                    const recentSwingLows = swingLowsRef.current.slice(-3)
+                    const isUptrend = recentSwingHighs.length >= 2 &&
+                                      recentSwingHighs[recentSwingHighs.length - 1].price > recentSwingHighs[0].price
+                    const isDowntrend = recentSwingLows.length >= 2 &&
+                                        recentSwingLows[recentSwingLows.length - 1].price < recentSwingLows[0].price
+
+                    // Track highest broken swing and lowest broken swing to only mark significant breaks
+                    let highestBrokenSwing = bosLinesRef.current
+                      .filter(b => b.type === 'bullish')
+                      .reduce((max, b) => Math.max(max, b.price), 0)
+                    let lowestBrokenSwing = bosLinesRef.current
+                      .filter(b => b.type === 'bearish')
+                      .reduce((min, b) => b.price > 0 ? Math.min(min, b.price) : min, Infinity)
+
+                    // Check for breaks of swing highs (only mark if it's a NEW high)
+                    swingHighsRef.current.forEach(swing => {
+                      if (!swing.broken && chartBar.high > swing.price) {
+                        // Only mark as BoS if this is higher than previous broken swings
+                        const isNewHigh = swing.price > highestBrokenSwing * 1.001 // At least 0.1% higher
+
+                        if (isNewHigh) {
+                          swing.broken = true
+
+                          // BoS if uptrend (making new highs), CHoCH if downtrend (reversal)
+                          if (isUptrend || !isDowntrend) {
+                            console.log(`⚪ Bullish BoS at $${swing.price.toFixed(4)} - New high`)
+                            const bosLine = candlestickSeriesRef.current.createPriceLine({
+                              price: swing.price,
+                              color: '#FFFFFF',
+                              lineWidth: 2,
+                              lineStyle: 0,
+                              axisLabelVisible: true,
+                              title: '↑',
+                            })
+                            bosLinesRef.current.push({ line: bosLine, price: swing.price, type: 'bullish', time: chartBar.time })
+                            highestBrokenSwing = swing.price
+                          } else {
+                            console.log(`🔵 CHoCH at $${swing.price.toFixed(4)} - Reversal`)
+                            const chochLine = candlestickSeriesRef.current.createPriceLine({
+                              price: swing.price,
+                              color: '#00FFFF',
+                              lineWidth: 2,
+                              lineStyle: 0,
+                              axisLabelVisible: true,
+                              title: '⟳',
+                            })
+                            chochLinesRef.current.push({ line: chochLine, price: swing.price, type: 'bullish', time: chartBar.time })
+                          }
+                        } else {
+                          // Mark as broken but don't draw a line (minor swing)
+                          swing.broken = true
+                        }
+                      }
+                    })
+
+                    // Check for breaks of swing lows (only mark if it's a NEW low)
+                    swingLowsRef.current.forEach(swing => {
+                      if (!swing.broken && chartBar.low < swing.price) {
+                        const isNewLow = swing.price < lowestBrokenSwing * 0.999 // At least 0.1% lower
+
+                        if (isNewLow) {
+                          swing.broken = true
+
+                          // BoS if downtrend (making new lows), CHoCH if uptrend (reversal)
+                          if (isDowntrend || !isUptrend) {
+                            console.log(`⚪ Bearish BoS at $${swing.price.toFixed(4)} - New low`)
+                            const bosLine = candlestickSeriesRef.current.createPriceLine({
+                              price: swing.price,
+                              color: '#FFFFFF',
+                              lineWidth: 2,
+                              lineStyle: 0,
+                              axisLabelVisible: true,
+                              title: '↓',
+                            })
+                            bosLinesRef.current.push({ line: bosLine, price: swing.price, type: 'bearish', time: chartBar.time })
+                            lowestBrokenSwing = swing.price
+                          } else {
+                            console.log(`🔵 CHoCH at $${swing.price.toFixed(4)} - Reversal`)
+                            const chochLine = candlestickSeriesRef.current.createPriceLine({
+                              price: swing.price,
+                              color: '#00FFFF',
+                              lineWidth: 2,
+                              lineStyle: 0,
+                              axisLabelVisible: true,
+                              title: '⟳',
+                            })
+                            chochLinesRef.current.push({ line: chochLine, price: swing.price, type: 'bearish', time: chartBar.time })
+                          }
+                        } else {
+                          swing.broken = true
+                        }
+                      }
+                    })
+
+                    // Limit to 5 most recent BoS/CHoCH lines each
+                    while (bosLinesRef.current.length > 5) {
+                      const oldest = bosLinesRef.current.shift()
+                      if (oldest && candlestickSeriesRef.current) {
+                        candlestickSeriesRef.current.removePriceLine(oldest.line)
+                      }
+                    }
+                    while (chochLinesRef.current.length > 5) {
+                      const oldest = chochLinesRef.current.shift()
+                      if (oldest && candlestickSeriesRef.current) {
+                        candlestickSeriesRef.current.removePriceLine(oldest.line)
+                      }
+                    }
+                  }
                 }
 
                 // Let TradingView handle scrolling naturally
@@ -646,6 +826,7 @@ export default function StockChart({ symbol, dataMode = 'live', onReplayStatusCh
       }
     }
   }, [symbol, dataMode, isLoading])
+
 
   return (
     <div className="h-full w-full relative flex flex-col" style={{ backgroundColor: '#0b0e13' }}>

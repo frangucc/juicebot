@@ -72,14 +72,32 @@ async def fetch_historical_bars(symbol: str, limit: int = 10000) -> list:
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Fetching historical bars for {symbol}...")
 
     try:
-        response = (supabase.table("historical_bars")
-                   .select("*")
-                   .eq("symbol", symbol.upper())
-                   .order("timestamp", desc=False)  # Ascending order for replay
-                   .limit(limit)
-                   .execute())
+        # Supabase Python client has a max limit of 1000 per request
+        # Need to paginate to get all bars
+        all_bars = []
+        page_size = 1000
+        offset = 0
 
-        bars = response.data
+        while len(all_bars) < limit:
+            response = (supabase.table("historical_bars")
+                       .select("*")
+                       .eq("symbol", symbol.upper())
+                       .order("timestamp", desc=False)  # Ascending order for replay
+                       .range(offset, offset + page_size - 1)
+                       .execute())
+
+            if not response.data:
+                break  # No more data
+
+            all_bars.extend(response.data)
+            offset += page_size
+
+            print(f"[{datetime.now().strftime('%H:%M:%S')}]   Fetched {len(response.data)} bars (total: {len(all_bars)})")
+
+            if len(response.data) < page_size:
+                break  # Last page
+
+        bars = all_bars[:limit]  # Cap at requested limit
         print(f"[{datetime.now().strftime('%H:%M:%S')}] ✓ Loaded {len(bars)} bars for {symbol}")
 
         # Normalize bars for continuous flow

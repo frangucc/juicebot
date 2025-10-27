@@ -19,15 +19,9 @@ from agents.smc_agent import SMCAgent
 from fast_classifier_v2 import TradingClassifierV2 as TradingClassifier
 from websocket_client import BarDataClient
 from position_storage import PositionStorage
-from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
-
-# Initialize Supabase client for historical data
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Client = create_client(supabase_url, supabase_key) if supabase_url and supabase_key else None
 
 # Initialize FastAPI
 app = FastAPI(
@@ -355,6 +349,39 @@ async def chat(msg: ChatMessage):
         raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
 
 
+@app.websocket("/events/{symbol}")
+async def events_stream(websocket: WebSocket, symbol: str):
+    """
+    WebSocket endpoint for server-side event streaming.
+
+    Client connects and automatically receives all events published for this symbol.
+    Used for: scaleout progress, order fills, alerts, etc.
+    """
+    from event_bus import event_bus
+
+    await websocket.accept()
+    conversation_id = f"ws_{symbol}_{datetime.now().timestamp()}"
+
+    # Subscribe to event bus
+    event_bus.subscribe(symbol, conversation_id, websocket)
+
+    try:
+        # Keep connection alive and listen for events
+        while True:
+            # Just wait for disconnect or periodic ping
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+            except asyncio.TimeoutError:
+                # Send ping to keep connection alive
+                await websocket.send_json({"type": "ping", "timestamp": datetime.now().isoformat()})
+    except WebSocketDisconnect:
+        print(f"[WebSocket] {symbol} disconnected")
+        event_bus.unsubscribe(symbol, conversation_id)
+    except Exception as e:
+        print(f"[WebSocket] Error: {e}")
+        event_bus.unsubscribe(symbol, conversation_id)
+
+
 @app.websocket("/chat/stream")
 async def chat_stream(websocket: WebSocket):
     """
@@ -564,6 +591,149 @@ async def get_position(symbol: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching position: {str(e)}")
+
+
+@app.post("/scaleout/{symbol}/cancel")
+async def cancel_scaleout(symbol: str):
+    """Cancel active scaleout for a symbol."""
+    from event_bus import event_bus
+
+    try:
+        cancelled = event_bus.cancel_task(symbol, "scaleout")
+
+        if cancelled:
+            # Publish cancellation event
+            await event_bus.publish(symbol, {
+                "type": "scaleout_cancelled",
+                "message": "⚠️ SCALEOUT CANCELLED BY USER"
+            })
+            return {"success": True, "message": "Scaleout cancelled"}
+        else:
+            return {"success": False, "message": "No active scaleout found"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error cancelling scaleout: {str(e)}")
+
+
+@app.get("/events/{symbol}")
+async def get_events(symbol: str, since: str = None, limit: int = 50):
+    """
+    Get event history for a symbol (for polling-based updates).
+
+    Args:
+        symbol: Stock symbol
+        since: ISO timestamp to get events after (optional)
+        limit: Maximum number of events to return (default 50)
+
+    Returns:
+        List of events in chronological order
+    """
+    from event_bus import event_bus
+    from datetime import datetime as dt
+
+    try:
+        # Get event history
+        events = event_bus.get_history(symbol, limit=limit)
+
+        # Filter by timestamp if 'since' provided
+        if since:
+            try:
+                # Parse and ensure both timestamps are timezone-aware
+                since_dt = dt.fromisoformat(since.replace('Z', '+00:00'))
+
+                # Make sure since_dt has timezone
+                if since_dt.tzinfo is None:
+                    from datetime import timezone
+                    since_dt = since_dt.replace(tzinfo=timezone.utc)
+
+                events = [
+                    e for e in events
+                    if dt.fromisoformat(e['timestamp'].replace('Z', '+00:00')) > since_dt
+                ]
+            except (ValueError, AttributeError) as e:
+                print(f"[Events] Error parsing timestamp: {e}")
+                pass  # Invalid timestamp, return all
+
+        return {
+            "symbol": symbol,
+            "events": events,
+            "count": len(events),
+            "timestamp": dt.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching events: {str(e)}")
+
+
+@app.get("/indicators/{symbol}")
+async def get_smc_indicators(symbol: str, lookback: int = 200):
+    """
+    Get BoS (Break of Structure) and CHoCH (Change of Character) indicators for chart display.
+
+    Args:
+        symbol: Stock symbol
+        lookback: Number of bars to analyze (default 200)
+
+    Returns:
+        {
+            "bos_levels": [
+                {
+                    "price": 0.5750,
+                    "type": "bullish" or "bearish",
+                    "target": 0.5850,
+                    "invalidation": 0.5745,
+                    "confidence": 7.8,
+                    "color": "white",
+                    "label": "BoS (bullish)",
+                    "formed_at": "2024-01-15T10:30:00",
+                    "bars_ago": 15
+                }
+            ],
+            "choch_levels": [
+                {
+                    "price": 0.5650,
+                    "type": "bullish_to_bearish" or "bearish_to_bullish",
+                    "target": 0.5720,
+                    "invalidation": 0.5645,
+                    "confidence": 6.5,
+                    "color": "cyan",
+                    "label": "CHoCH (reversal)",
+                    "formed_at": "2024-01-15T09:45:00",
+                    "bars_ago": 25
+                }
+            ],
+            "symbol": "BYND",
+            "timestamp": "2024-01-15T11:00:00"
+        }
+    """
+    try:
+        # Get classifier for this symbol
+        classifier = classifiers.get(symbol)
+        if not classifier or not classifier.bar_history:
+            return {
+                "bos_levels": [],
+                "choch_levels": [],
+                "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),
+                "message": f"No bar data available for {symbol}"
+            }
+
+        # Import SMC indicators
+        from smc_indicators import SMCIndicators
+
+        # Create indicator instance and get overlays
+        indicators = SMCIndicators()
+        overlays = indicators.get_chart_overlays(classifier.bar_history, lookback=lookback)
+
+        # Add metadata
+        overlays['symbol'] = symbol
+        overlays['timestamp'] = datetime.now().isoformat()
+        overlays['bars_available'] = len(classifier.bar_history)
+
+        return overlays
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating indicators: {str(e)}")
 
 
 if __name__ == "__main__":

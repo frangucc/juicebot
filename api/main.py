@@ -279,28 +279,43 @@ async def get_historical_bars(symbol: str, limit: int = 500):
 
     Args:
         symbol: Stock symbol (e.g., 'BYND')
-        limit: Number of bars to return (default: 500, max: 2000)
+        limit: Number of bars to return (default: 500, max: 10000)
 
     Returns:
         List of 1-minute OHLCV bars with timestamp, open, high, low, close, volume
     """
     try:
-        # Cap limit at 2000 for historical data
-        limit = min(limit, 2000)
+        # Cap limit at 10000 for historical data (allow loading all available bars)
+        limit = min(limit, 10000)
 
-        # Query historical_bars table
-        response = (supabase.table("historical_bars")
-                   .select("*")
-                   .eq("symbol", symbol.upper())
-                   .order("timestamp", desc=True)
-                   .limit(limit)
-                   .execute())
+        # Supabase Python client has a max limit of 1000 per request
+        # Need to paginate to get all bars
+        all_bars = []
+        page_size = 1000
+        offset = 0
 
-        if not response.data:
+        while len(all_bars) < limit:
+            response = (supabase.table("historical_bars")
+                       .select("*")
+                       .eq("symbol", symbol.upper())
+                       .order("timestamp", desc=True)
+                       .range(offset, offset + page_size - 1)
+                       .execute())
+
+            if not response.data:
+                break  # No more data
+
+            all_bars.extend(response.data)
+            offset += page_size
+
+            if len(response.data) < page_size:
+                break  # Last page
+
+        if not all_bars:
             raise HTTPException(status_code=404, detail=f"No historical bar data found for symbol {symbol}")
 
         # Reverse to get chronological order (oldest first)
-        bars = list(reversed(response.data))
+        bars = list(reversed(all_bars[:limit]))
 
         return bars
     except HTTPException:

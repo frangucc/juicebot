@@ -39,6 +39,8 @@ export default function StockChart({ symbol, dataMode = 'live' }: StockChartProp
   const chartRef = useRef<any>(null)
   const candlestickSeriesRef = useRef<any>(null)
   const positionLineRef = useRef<any>(null)
+  const bosLinesRef = useRef<any[]>([]) // Track BoS indicator lines
+  const chochLinesRef = useRef<any[]>([]) // Track CHoCH indicator lines
   const wsRef = useRef<WebSocket | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -265,6 +267,101 @@ export default function StockChart({ symbol, dataMode = 'live' }: StockChartProp
       if (intervalId) clearInterval(intervalId)
     }
   }, [symbol, dataMode, candlestickSeriesRef.current])
+
+  // Fetch and display SMC indicators (BoS and CHoCH)
+  useEffect(() => {
+    if (!candlestickSeriesRef.current) return
+
+    let intervalId: NodeJS.Timeout
+
+    const fetchIndicators = async () => {
+      try {
+        const response = await fetch(`${AI_API_URL}/indicators/${symbol}?lookback=200`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        console.log(`[${new Date().toLocaleTimeString()}] Fetched indicators:`, {
+          bos: data.bos_levels?.length || 0,
+          choch: data.choch_levels?.length || 0
+        })
+
+        // Remove existing indicator lines
+        bosLinesRef.current.forEach(line => {
+          if (candlestickSeriesRef.current) {
+            candlestickSeriesRef.current.removePriceLine(line)
+          }
+        })
+        chochLinesRef.current.forEach(line => {
+          if (candlestickSeriesRef.current) {
+            candlestickSeriesRef.current.removePriceLine(line)
+          }
+        })
+        bosLinesRef.current = []
+        chochLinesRef.current = []
+
+        // Draw BoS levels (white lines)
+        if (data.bos_levels) {
+          data.bos_levels.forEach((level: any) => {
+            if (!candlestickSeriesRef.current) return
+
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: level.price,
+              color: '#FFFFFF',
+              lineWidth: 2,
+              lineStyle: 0, // Solid
+              axisLabelVisible: true,
+              title: `BoS ${level.type} (${level.confidence.toFixed(1)})`,
+            })
+            bosLinesRef.current.push(line)
+            console.log(`  ✓ BoS ${level.type} at $${level.price.toFixed(4)} (confidence: ${level.confidence})`)
+          })
+        }
+
+        // Draw CHoCH levels (cyan lines)
+        if (data.choch_levels) {
+          data.choch_levels.forEach((level: any) => {
+            if (!candlestickSeriesRef.current) return
+
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: level.price,
+              color: '#00FFFF',
+              lineWidth: 2,
+              lineStyle: 0, // Solid
+              axisLabelVisible: true,
+              title: `CHoCH (${level.confidence.toFixed(1)})`,
+            })
+            chochLinesRef.current.push(line)
+            console.log(`  ✓ CHoCH at $${level.price.toFixed(4)} (confidence: ${level.confidence})`)
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching indicators:', err)
+      }
+    }
+
+    // Initial fetch
+    fetchIndicators()
+
+    // Poll every 5 seconds for indicator updates
+    intervalId = setInterval(fetchIndicators, 5000)
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+      // Clean up indicator lines
+      bosLinesRef.current.forEach(line => {
+        if (candlestickSeriesRef.current) {
+          candlestickSeriesRef.current.removePriceLine(line)
+        }
+      })
+      chochLinesRef.current.forEach(line => {
+        if (candlestickSeriesRef.current) {
+          candlestickSeriesRef.current.removePriceLine(line)
+        }
+      })
+      bosLinesRef.current = []
+      chochLinesRef.current = []
+    }
+  }, [symbol, candlestickSeriesRef.current])
 
   return (
     <div className="h-full w-full relative bg-gray-950">
